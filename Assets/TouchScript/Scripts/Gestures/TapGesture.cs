@@ -145,7 +145,9 @@ namespace TouchScript.Gestures
         private Vector2 totalMovement;
         private TimedSequence<Pointer> pointerSequence = new TimedSequence<Pointer>();
 
-		private CustomSampler gestureSampler;
+#if UNITY_5_6_OR_NEWER
+        private CustomSampler gestureSampler;
+#endif
 
         #endregion
 
@@ -164,13 +166,15 @@ namespace TouchScript.Gestures
 
         #region Unity methods
 
-		/// <inheritdoc />
-		protected override void Awake()
-		{
-			base.Awake();
+        /// <inheritdoc />
+        protected override void Awake()
+        {
+            base.Awake();
 
-			gestureSampler = CustomSampler.Create("[TouchScript] Tap Gesture");
-		}
+#if UNITY_5_6_OR_NEWER
+            gestureSampler = CustomSampler.Create("[TouchScript] Tap Gesture");
+#endif
+        }
 
         /// <inheritdoc />
         protected override void OnEnable()
@@ -193,7 +197,9 @@ namespace TouchScript.Gestures
         /// <inheritdoc />
         protected override void pointersPressed(IList<Pointer> pointers)
         {
-			gestureSampler.Begin();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.Begin();
+#endif
 
             base.pointersPressed(pointers);
 
@@ -201,7 +207,9 @@ namespace TouchScript.Gestures
                 pointersNumState == PointersNumState.PassedMinMaxThreshold)
             {
                 setState(GestureState.Failed);
-				gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+                gestureSampler.End();
+#endif
                 return;
             }
 
@@ -226,7 +234,9 @@ namespace TouchScript.Gestures
                         if ((pointers[0].Position - startPosition).sqrMagnitude > distanceLimitInPixelsSquared)
                         {
                             setState(GestureState.Failed);
-							gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+                            gestureSampler.End();
+#endif
                             return;
                         }
                     }
@@ -243,13 +253,17 @@ namespace TouchScript.Gestures
                 }
             }
 
-			gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.End();
+#endif
         }
 
         /// <inheritdoc />
         protected override void pointersUpdated(IList<Pointer> pointers)
         {
-			gestureSampler.Begin();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.Begin();
+#endif
 
             base.pointersUpdated(pointers);
 
@@ -259,13 +273,17 @@ namespace TouchScript.Gestures
                 if (totalMovement.sqrMagnitude > distanceLimitInPixelsSquared) setState(GestureState.Failed);
             }
 
-			gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.End();
+#endif
         }
 
         /// <inheritdoc />
         protected override void pointersReleased(IList<Pointer> pointers)
         {
-			gestureSampler.Begin();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.Begin();
+#endif
 
             base.pointersReleased(pointers);
 
@@ -289,7 +307,9 @@ namespace TouchScript.Gestures
                     if (!isActive)
                     {
                         setState(GestureState.Failed);
-						gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+                        gestureSampler.End();
+#endif
                         return;
                     }
 
@@ -308,7 +328,9 @@ namespace TouchScript.Gestures
                 }
             }
 
-			gestureSampler.End();
+#if UNITY_5_6_OR_NEWER
+            gestureSampler.End();
+#endif
         }
 
         /// <inheritdoc />

@@ -13,8 +13,8 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - 
+  - surface
+  - objects
   - 
   - 
   - 
@@ -38,6 +38,15 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: bg
+    uniqueID: 4138451139
+    locked: 0
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: objects
+    uniqueID: 3295656145
+    locked: 0
+  - name: cursors
+    uniqueID: 1005271251
     locked: 0
