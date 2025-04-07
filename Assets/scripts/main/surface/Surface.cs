@@ -384,4 +384,20 @@ public class Surface : MonoBehaviour {
 		}
 		return new RaycastResult();
 	}
+
+	// Add these new methods for simulator access
+	public void SimulatePuckAdded(SurfaceObject puck, Vector2 position, float angle)
+	{
+		OnObjectAdded?.Invoke(puck, position, angle);
+	}
+
+	public void SimulatePuckUpdated(SurfaceObject puck, Vector2 position, float angle)
+	{
+		OnObjectUpdated?.Invoke(puck, position, angle);
+	}
+
+	public void SimulatePuckRemoved(SurfaceObject puck)
+	{
+		OnObjectRemoved?.Invoke(puck);
+	}
 }
