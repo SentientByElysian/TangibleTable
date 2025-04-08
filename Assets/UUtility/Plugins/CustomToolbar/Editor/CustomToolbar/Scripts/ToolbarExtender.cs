@@ -9,43 +9,25 @@ namespace UnityToolbarExtender
 	[InitializeOnLoad]
 	public static class ToolbarExtender
 	{
-		private static int m_toolCount;
-		private static GUIStyle m_commandStyle = null;
+		static int m_toolCount;
+		static GUIStyle m_commandStyle = null;
 
 		public static readonly List<Action> LeftToolbarGUI = new List<Action>();
 		public static readonly List<Action> RightToolbarGUI = new List<Action>();
 
 		static ToolbarExtender()
 		{
-			EditorApplication.update += Init;
-			EditorApplication.playModeStateChanged += OnChangePlayMode;
-		}
-
-		private static void OnChangePlayMode(PlayModeStateChange state) 
-		{
-			if(state == PlayModeStateChange.EnteredPlayMode)
-				InitElements();
-		}
-
-		private static void Init() 
-		{
-			EditorApplication.update -= Init;
-			InitElements();
-		}
-
-		public static void InitElements() 
-		{
 			Type toolbarType = typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
-
+			
 #if UNITY_2019_1_OR_NEWER
 			string fieldName = "k_ToolCount";
 #else
 			string fieldName = "s_ShownToolIcons";
 #endif
-
+			
 			FieldInfo toolIcons = toolbarType.GetField(fieldName,
 				BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-
+			
 #if UNITY_2019_3_OR_NEWER
 			m_toolCount = toolIcons != null ? ((int) toolIcons.GetValue(null)) : 8;
 #elif UNITY_2019_1_OR_NEWER
@@ -55,13 +37,10 @@ namespace UnityToolbarExtender
 #else
 			m_toolCount = toolIcons != null ? ((Array) toolIcons.GetValue(null)).Length : 5;
 #endif
-
-			ToolbarCallback.OnToolbarGUI -= OnGUI;
-			ToolbarCallback.OnToolbarGUI += OnGUI;
-			ToolbarCallback.OnToolbarGUILeft -= GUILeft;
-			ToolbarCallback.OnToolbarGUILeft += GUILeft;
-			ToolbarCallback.OnToolbarGUIRight -= GUIRight;
-			ToolbarCallback.OnToolbarGUIRight += GUIRight;
+	
+			ToolbarCallback.OnToolbarGUI = OnGUI;
+			ToolbarCallback.OnToolbarGUILeft = GUILeft;
+			ToolbarCallback.OnToolbarGUIRight = GUIRight;
 		}
 
 #if UNITY_2019_3_OR_NEWER
@@ -78,7 +57,7 @@ namespace UnityToolbarExtender
 		public const float playPauseStopWidth = 100;
 #endif
 
-		public static void OnGUI()
+		static void OnGUI()
 		{
 			// Create two containers, left and right
 			// Screen is whole toolbar
@@ -168,9 +147,8 @@ namespace UnityToolbarExtender
 				GUILayout.EndArea();
 			}
 		}
-
-		private static void GUILeft() 
-		{
+		
+		public static void GUILeft() {
 			GUILayout.BeginHorizontal();
 			foreach (var handler in LeftToolbarGUI)
 			{
@@ -178,9 +156,8 @@ namespace UnityToolbarExtender
 			}
 			GUILayout.EndHorizontal();
 		}
-
-		private static void GUIRight() 
-		{
+		
+		public static void GUIRight() {
 			GUILayout.BeginHorizontal();
 			foreach (var handler in RightToolbarGUI)
 			{

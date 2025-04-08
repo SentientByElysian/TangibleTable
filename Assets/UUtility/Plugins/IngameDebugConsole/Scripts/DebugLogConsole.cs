@@ -54,6 +54,9 @@ namespace IngameDebugConsole
 	{
 		public delegate bool ParseFunction( string input, out object output );
 
+		public delegate void CommandExecutedDelegate( string command, object[] parameters );
+		public static event CommandExecutedDelegate OnCommandExecuted;
+
 		// All the commands
 		private static readonly List<ConsoleMethodInfo> methods = new List<ConsoleMethodInfo>();
 		private static readonly List<ConsoleMethodInfo> matchingMethods = new List<ConsoleMethodInfo>( 4 );
@@ -123,9 +126,13 @@ namespace IngameDebugConsole
 
 		static DebugLogConsole()
 		{
+#if !IDG_DISABLE_HELP_COMMAND
 			AddCommand( "help", "Prints all commands", LogAllCommands );
 			AddCommand<string>( "help", "Prints all matching commands", LogAllCommandsWithName );
+#endif
+#if IDG_ENABLE_HELPER_COMMANDS || IDG_ENABLE_SYSINFO_COMMAND
 			AddCommand( "sysinfo", "Prints system information", LogSystemInfo );
+#endif
 
 #if UNITY_EDITOR || !NETFX_CORE
 			// Find all [ConsoleMethod] functions
@@ -190,17 +197,23 @@ namespace IngameDebugConsole
 		{
 			try
 			{
+				List<ConsoleAttribute> methods = new List<ConsoleAttribute>();
 				foreach( Type type in assembly.GetExportedTypes() )
 				{
 					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
 					{
-						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
+						foreach( ConsoleAttribute consoleAttribute in method.GetCustomAttributes( typeof(ConsoleAttribute), false ) )
 						{
-							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-							if( consoleMethod != null )
-								AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
+							consoleAttribute.SetMethod(method);
+							methods.Add(consoleAttribute);
 						}
 					}
+				}
+
+				methods.Sort((a, b) => a.Order.CompareTo(b.Order));
+				for (int i = 0; i < methods.Count; i++)
+				{
+					methods[i].Load();
 				}
 			}
 			catch( NotSupportedException ) { }
@@ -210,6 +223,11 @@ namespace IngameDebugConsole
 			{
 				Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assembly.GetName().Name + "\n" + e.ToString() );
 			}
+		}
+
+		public static List<ConsoleMethodInfo> GetAllCommands()
+		{
+			return methods;
 		}
 
 		// Logs the list of available commands
@@ -427,7 +445,7 @@ namespace IngameDebugConsole
 			AddCommand( command, description, method, instance, parameterNames );
 		}
 
-		private static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
+		internal static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
 		{
 			if( string.IsNullOrEmpty( command ) )
 			{
@@ -745,6 +763,9 @@ namespace IngameDebugConsole
 					else
 						Debug.Log( "Returned: " + result.ToString() );
 				}
+
+				if( OnCommandExecuted != null )
+					OnCommandExecuted( methodToExecute.command, parameters );
 			}
 		}
 
@@ -1115,7 +1136,7 @@ namespace IngameDebugConsole
 		public static bool ParseFloat( string input, out object output )
 		{
 			float value;
-			bool result = float.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = float.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;
@@ -1124,7 +1145,7 @@ namespace IngameDebugConsole
 		public static bool ParseDouble( string input, out object output )
 		{
 			double value;
-			bool result = double.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = double.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;
@@ -1133,7 +1154,7 @@ namespace IngameDebugConsole
 		public static bool ParseDecimal( string input, out object output )
 		{
 			decimal value;
-			bool result = decimal.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = decimal.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;

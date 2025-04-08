@@ -68,8 +68,7 @@ MonoBehaviour:
   m_text: a
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3fbde2e562e333d488bc46986fc6f4f1, type: 2}
-  m_sharedMaterial: {fileID: -6949820610600499109, guid: 3fbde2e562e333d488bc46986fc6f4f1,
-    type: 2}
+  m_sharedMaterial: {fileID: -6949820610600499109, guid: 3fbde2e562e333d488bc46986fc6f4f1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -367,8 +366,6 @@ MonoBehaviour:
   tweenTransform: {fileID: 0}
   timeframe: 1000
   currentFrame: 0
-  loopCounter: 0
-  loopCompleted: 0
   playbackState: 0
   totalProperty: 0
   completedProperty: 0
@@ -377,8 +374,6 @@ MonoBehaviour:
   completedSubTween: 0
   subTweenProgress: 0
   autoStart: 0
-  loopMode: 0
-  loopCount: -1
   useSingleTween: 1
   playTweenConfig:
     delay: 0

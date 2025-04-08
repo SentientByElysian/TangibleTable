@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
@@ -48,6 +49,8 @@ namespace UTool.TabSystem
                 variableName = fieldInfo.Name;
 
             defaultValue = fieldInfo.GetValue(parent);
+            if (defaultValue == null)
+                defaultValue = GetDefaultValueForType(fieldInfo.FieldType);
 
             variableType = TabBackend.GetVariableType(defaultValue);
             vType = TabBackend.GetType(variableType);
@@ -92,6 +95,34 @@ namespace UTool.TabSystem
                     break;
 
             }
+        }
+        
+        private object GetDefaultValueForType(Type type)
+        {
+            if (type == typeof(string))
+                return "";
+            else if (type == typeof(int))
+                return 0;
+            else if (type == typeof(float))
+                return 0f;
+            else if (type == typeof(bool))
+                return false;
+            else if (type == typeof(Vector2))
+                return Vector2.zero;
+            else if (type == typeof(Vector3))
+                return Vector3.zero;
+            else if (type == typeof(Vector4))
+                return Vector4.zero;
+            else if (type == typeof(Color))
+                return Color.white;
+            else if (type.IsEnum)
+                return Enum.GetValues(type).GetValue(0);
+            else if (type.IsArray)
+                return Array.CreateInstance(type.GetElementType(), 0);
+            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+                return Activator.CreateInstance(type);
+            else
+                return null; // For types we can't create a default value for
         }
     }
 }

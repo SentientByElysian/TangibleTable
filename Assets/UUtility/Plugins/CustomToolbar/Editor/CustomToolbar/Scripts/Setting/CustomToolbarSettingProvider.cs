@@ -59,7 +59,8 @@ namespace UnityToolbarExtender
 			m_toolbarSetting.ApplyModifiedProperties();
 			if (GUI.changed) {
 				EditorUtility.SetDirty(m_toolbarSetting.targetObject);
-				ToolbarExtender.OnGUI();
+				// ToolbarExtender.OnGUI();
+				ToolbarExtender.GUILeft();
 #if UNITY_2020_3_OR_NEWER
                 setting.Save();
 #endif

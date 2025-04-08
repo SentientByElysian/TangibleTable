@@ -7,7 +7,15 @@ using UnityEditor.ShortcutManagement;
 using System.Reflection;
 using System.Linq;
 using UnityEngine.UIElements;
+using UnityEngine.SceneManagement;
+using UnityEditor.SceneManagement;
+using System.Diagnostics;
+using Type = System.Type;
+using Delegate = System.Delegate;
+using Action = System.Action;
 using static VTabs.Libs.VUtils;
+using static VTabs.Libs.VGUI;
+
 
 
 
@@ -15,671 +23,1494 @@ namespace VTabs
 {
     public static class VTabs
     {
-        static void Update()
+
+        static void UpdateGUIs()
         {
-            if (!EditorWindow.mouseOverWindow) return;
+            foreach (var dockArea in allDockAreas)
+                if (!guis_byDockArea.ContainsKey(dockArea))
+                    guis_byDockArea[dockArea] = new VTabsGUI(dockArea);
 
-            var curEvent = (Event)typeof(Event).GetField("s_Current", maxBindingFlags).GetValue(maxBindingFlags);
+            foreach (var dockArea in guis_byDockArea.Keys.ToList().Where(r => !r))
+                guis_byDockArea.Remove(dockArea);
 
-            void dragndrop_()
+
+
+            foreach (var gui in guis_byDockArea.Values)
             {
-                if (!VTabsMenuItems.dragndropEnabled) return;
-                if (curEvent.type != EventType.DragUpdated && curEvent.type != EventType.DragPerform) return;
-
-
-                var dropAreaHeight = 40;
-
-                if (EditorWindow.mouseOverWindow.GetType() == hierarchyType && DragAndDrop.objectReferences.Any(r => r is GameObject))
-                    dropAreaHeight = 20;
-
-                if (!EditorWindow.mouseOverWindow.rootVisualElement.contentRect.SetHeight(dropAreaHeight).Contains(curEvent.mousePosition)) return;
-
-
-                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
-
-                if (curEvent.type != EventType.DragPerform) return;
-
-                DragAndDrop.AcceptDrag();
-
-                new TabDescription(DragAndDrop.objectReferences.First()).CreateWindow(GetDockArea(EditorWindow.mouseOverWindow), false);
-
+                gui.UpdateScrollAnimation();
+                gui.UpdateLockButtonHiding();
             }
-            void scrolling()
+
+
+            // foreach (var dockArea in allDockAreas)
+            //     // dockArea.GetMemberValue<RectOffset>("m_BorderSize").Log(r => dockArea.name + ": " + r.left);
+            // dockArea.GetMemberValue<Rect>("m_TabAreaRect").Log(r => dockArea.name + ": " + r.x);
+
+
+        }
+
+        public static Dictionary<Object, VTabsGUI> guis_byDockArea = new();
+
+
+
+
+
+
+
+        public static void UpdateStyleSheet()
+        {
+            if (!Application.unityVersion.StartsWith("6000")) return;
+
+
+            void updatePluginFolderPath()
             {
-                if (keyPressed) return;
-                if (curEvent.delta == Vector2.zero) return;
-                if (curEvent.type == EventType.MouseMove) return;
-                if (curEvent.type == EventType.MouseDrag) return;
-                if (curEvent.type != EventType.ScrollWheel && delayedMousePosition_screenSpace != EditorGUIUtility.GUIToScreenPoint(curEvent.mousePosition)) return; // uncaptured mouse move/drag check
-                if (curEvent.type != EventType.ScrollWheel && VTabsMenuItems.fixPhantomScrollingEnabled && curEvent.delta.x == (int)curEvent.delta.x) return; // osx uncaptured mouse move/drag in sceneview ang gameview workaround
+                if (AssetDatabase.LoadAssetAtPath<Object>(pluginFolderPath.CombinePath("VTabs.cs")) is not null) return;
 
 
-                void switchTab(bool right)
-                {
-                    if (!VTabsMenuItems.shiftscrollSwitchTabEnabled) return;
-                    if (!EditorWindow.mouseOverWindow.docked) return;
-                    if (EditorWindow.mouseOverWindow.maximized) return;
+                var mainScriptPath = GetScriptPath(nameof(VTabs));
 
-                    var tabs = GetTabList();
-
-                    var i0 = tabs.IndexOf(EditorWindow.mouseOverWindow);
-                    var i1 = Mathf.Clamp(i0 + (right ? 1 : -1), 0, tabs.Count - 1);
-
-                    tabs[i1].Focus();
-
-                    UpdateTabHeader(tabs[i1]);
-
-                    EnsureFocusedTabVisibleOnScroller();
-                }
-                void moveTab(bool right)
-                {
-                    if (!VTabsMenuItems.shiftscrollMoveTabEnabled) return;
-
-                    var tabs = GetTabList();
-
-                    var i0 = tabs.IndexOf(EditorWindow.mouseOverWindow);
-                    var i1 = Mathf.Clamp(i0 + (right ? 1 : -1), 0, tabs.Count - 1);
-
-                    var r = tabs[i0];
-                    tabs[i0] = tabs[i1];
-                    tabs[i1] = r;
-                    tabs[i1].Focus();
-
-                    EnsureFocusedTabVisibleOnScroller();
-                }
-
-                void shiftscroll()
-                {
-                    if (!curEvent.shift) return;
-
-
-                    var dScroll = Application.platform == RuntimePlatform.OSXEditor ? curEvent.delta.x // osx sends delta.y as delta.x when shift is pressed
-                                                                                    : curEvent.delta.x - curEvent.delta.y; // some software on windows may do that too
-
-                    if (dScroll != 0)
-                        if (curEvent.control || curEvent.command)
-                        {
-                            if (VTabsMenuItems.shiftscrollMoveTabEnabled)
-                                moveTab(dScroll > 0);
-                        }
-                        else
-                        {
-                            if (VTabsMenuItems.shiftscrollSwitchTabEnabled)
-                                switchTab(dScroll > 0);
-                        }
-
-                }
-                void sidescroll()
-                {
-                    if (curEvent.shift) return;
-                    if (curEvent.delta.x == 0) return;
-                    if (curEvent.delta.x.Abs() < curEvent.delta.y.Abs()) return;
-
-
-                    if ((int)(sidesscrollPosition * VTabsMenuItems.sidescrollSensitivity / 2) != (int)((sidesscrollPosition += curEvent.delta.x) * VTabsMenuItems.sidescrollSensitivity / 2))
-                        if (curEvent.control || curEvent.command)
-                        {
-                            if (VTabsMenuItems.sidescrollMoveTabEnabled)
-                                moveTab(curEvent.delta.x < 0);
-                        }
-                        else
-                        {
-                            if (VTabsMenuItems.sidescrollSwitchTabEnabled)
-                                switchTab(curEvent.delta.x < 0);
-                        }
-
-                }
-
-                shiftscroll();
-                sidescroll();
+                ProjectPrefs.SetString("vTabs-plugin-folder-path", mainScriptPath.GetParentPath());
 
             }
 
-            dragndrop_();
-            scrolling();
-
-            UpdateTabHeader(EditorWindow.mouseOverWindow);
-
-        }
-        static float sidesscrollPosition;
-
-
-
-        static void UpdateDelayedMousePosition()
-        {
-            var curEvent = (Event)typeof(Event).GetField("s_Current", maxBindingFlags).GetValue(maxBindingFlags);
-
-            delayedMousePosition_screenSpace = EditorGUIUtility.GUIToScreenPoint(curEvent.mousePosition);
-
-            EditorApplication.delayCall += UpdateDelayedMousePosition;
-
-        }
-        static Vector2 delayedMousePosition_screenSpace;
-
-        static void OnKeyEvent()
-        {
-            void keyPressed_()
+            void generate()
             {
-                if (Event.current.keyCode == KeyCode.LeftShift) return;
-                if (Event.current.keyCode == KeyCode.LeftControl) return;
-                if (Event.current.keyCode == KeyCode.LeftCommand) return;
-                if (Event.current.keyCode == KeyCode.RightShift) return;
-                if (Event.current.keyCode == KeyCode.RightControl) return;
-                if (Event.current.keyCode == KeyCode.RightCommand) return;
+                var s = "";
 
-                if (Event.current.type == EventType.KeyDown)
-                    keyPressed = true;
+                void addComment()
+                {
+                    s +=
+                    @"
+/* This file is generated by vTabs to modify tab style */
+/* Feel free to remove it from version control */
+                    ";
+                }
 
-                if (Event.current.type == EventType.KeyUp)
-                    keyPressed = false;
+                void addLargeTabs()
+                {
+                    if (!VTabsMenu.largeTabStyleEnabled) return;
+
+                    s +=
+                    @"
+/* tab text */
+.dragtab
+{
+    padding-left: 10px;
+}
+
+/* tab itself */
+.tab
+{
+    padding-right: 27px;
+}
+                    ";
+                }
+                void addNeatTabs()
+                {
+                    if (!VTabsMenu.neatTabStyleEnabled) return;
+
+                    s +=
+                    @"
+/* tab text */
+.dragtab
+{
+    padding-left: 10px;
+}
+
+/* tab itself */
+.tab
+{
+    padding-right: -1px;
+}
+                    ";
+                }
+
+                void addClassicBackground_dark()
+                {
+                    if (!VTabsMenu.classicBackgroundEnabled) return;
+                    if (!isDarkTheme) return;
+
+                    s +=
+                    @"
+/* background */
+.dockarea
+{
+     background-color: #262626;
+}
+
+/* tab text */
+.dragtab
+{
+     color: #dedede;
+}
+
+/* top and bottom bars */
+.AppToolbar
+{
+     background-color: #181818;
+}
+                    ";
+                }
+                void addClassicBackground_light()
+                {
+                    if (!VTabsMenu.classicBackgroundEnabled) return;
+                    if (isDarkTheme) return;
+
+                    s +=
+                    @"
+/* background */
+.dockarea
+{
+     background-color: #a9a9a9;
+}
+
+/* top and bottom bars */
+.AppToolbar
+{
+     background-color: #888888;
+}
+                    ";
+                }
+                void addGreyBackground()
+                {
+                    if (!VTabsMenu.greyBackgroundEnabled) return;
+
+                    s +=
+                    @"
+/* background */
+.dockarea
+{
+     background-color: #222222;
+}
+
+/* tab text */
+.dragtab
+{
+     color: #dedede;
+}
+
+/* top and bottom bars */
+.AppToolbar
+{
+     background-color: #222222;
+}
+                    ";
+                }
+
+                void save()
+                {
+                    styleSheetPath.EnsureDirExists();
+
+                    System.IO.File.WriteAllText(styleSheetPath, s);
+
+                    AssetDatabase.ImportAsset(styleSheetPath);
+
+                }
+                void addMetadata()
+                {
+                    var importer = AssetImporter.GetAtPath(styleSheetPath);
+
+                    importer.userData = VTabsMenu.tabStyle + " " + VTabsMenu.backgroundStyle + " " + (isDarkTheme ? 1 : 0);
+
+                    importer.Dirty();
+                    importer.SaveAndReimport();
+
+                }
+
+
+                addComment();
+
+                addLargeTabs();
+                addNeatTabs();
+
+                addClassicBackground_dark();
+                addClassicBackground_light();
+                addGreyBackground();
+
+                save();
+                addMetadata();
+
+                EditorUtility.RequestScriptReload();
+
+            }
+            void delete()
+            {
+                System.IO.Directory.Delete(styleSheetsFolderPath, recursive: true);
+
+                System.IO.File.Delete(styleSheetsFolderPath + ".meta");
+
+                AssetDatabase.Refresh();
+
+            }
+            void update()
+            {
+                var importer = AssetImporter.GetAtPath(styleSheetPath);
+
+                if (importer.userData == null || importer.userData.Length != 5) return;
+
+
+                var tabStyle = (int)char.GetNumericValue(importer.userData[0]);
+                var backgroundStyle = (int)char.GetNumericValue(importer.userData[2]);
+                var wasDarkTheme = (int)char.GetNumericValue(importer.userData[4]) == 1;
+
+                if (tabStyle != VTabsMenu.tabStyle || backgroundStyle != VTabsMenu.backgroundStyle || isDarkTheme != wasDarkTheme)
+                    generate();
+
+            }
+
+
+            updatePluginFolderPath();
+
+            var hasStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(styleSheetPath) != null;
+            var shouldHaveStyleSheet = (VTabsMenu.tabStyle != 0 || VTabsMenu.backgroundStyle != 0) && !VTabsMenu.pluginDisabled;
+
+
+            if (shouldHaveStyleSheet && !hasStyleSheet) generate();
+            if (!shouldHaveStyleSheet && hasStyleSheet) delete();
+
+            if (shouldHaveStyleSheet && hasStyleSheet) update();
+
+        }
+
+        static string pluginFolderPath => ProjectPrefs.GetString("vTabs-plugin-folder-path");
+        static string styleSheetsFolderPath => pluginFolderPath.CombinePath("StyleSheets");
+        static string styleSheetPath => pluginFolderPath.CombinePath("StyleSheets/Extensions/common.uss");
+
+
+
+
+
+
+
+
+
+
+
+        static void Shortcuts() // globalEventHandler
+        {
+            if (!curEvent.isKeyDown) return;
+
+            void addTab()
+            {
+                if (curEvent.keyCode != KeyCode.T) return;
+                if (curEvent.modifiers != EventModifiers.Control
+                 && curEvent.modifiers != EventModifiers.Command) return;
+
+                if (!VTabsMenu.addTabShortcutEnabled) return;
+
+                if (EditorWindow.mouseOverWindow.GetDockArea() is not Object dockArea) return;
+                if (!guis_byDockArea.TryGetValue(dockArea, out var gui)) return;
+
+
+                VTabsAddTabWindow.Open(dockArea);
+
+                EditorWindow.mouseOverWindow.Repaint(); // for + button to light up 
+
+                curEvent.Use();
 
             }
             void closeTab()
             {
-                if (Event.current.type != EventType.KeyDown) return;
-                if (!Event.current.control && !Event.current.command) return;
-                if (Event.current.keyCode != KeyCode.W) return;
-                if (!VTabsMenuItems.closeTabEnabled) return;
-                if (!EditorWindow.mouseOverWindow) return;
-                if (!EditorWindow.mouseOverWindow.docked) return;
-                if (EditorWindow.mouseOverWindow.maximized) return;
-                if (GetTabList().Count <= 1) return;
+                if (curEvent.keyCode != KeyCode.W) return;
+                if (curEvent.modifiers != EventModifiers.Control
+                 && curEvent.modifiers != EventModifiers.Command) return;
+
+                if (!VTabsMenu.closeTabShortcutEnabled) return;
+
+                if (EditorWindow.mouseOverWindow.GetDockArea() is not Object dockArea) return;
+                if (!guis_byDockArea.TryGetValue(dockArea, out var gui)) return;
+
+                if (gui.tabs.Count == 1) return;
 
 
-                Event.current.Use();
+                gui.CloseTab(gui.activeTab);
 
-                closedTabsForReopening.Push(new TabDescription(EditorWindow.mouseOverWindow));
-
-                EditorWindow.mouseOverWindow.Close();
-
-                EnsureFocusedTabVisibleOnScroller();
-
-            }
-            void addTab()
-            {
-                if (Event.current.type != EventType.KeyDown) return;
-                if (!Event.current.control && !Event.current.command) return;
-                if (Event.current.keyCode != KeyCode.T) return;
-                if (Event.current.shift) return;
-                if (!EditorWindow.mouseOverWindow) return;
-                if (!VTabsMenuItems.addTabEnabled) return;
-
-
-                Event.current.Use();
-
-                var tabListKey = "vTabs-AddTabMenu-" + GetProjectId();
-
-                var customList = JsonUtility.FromJson<TabDescription.ListHolderForJson>(EditorPrefs.GetString(tabListKey))?.list ?? new List<TabDescription>();
-
-                var defaultList = new List<TabDescription>();
-                defaultList.Add(new TabDescription("SceneView", "Scene"));
-                defaultList.Add(new TabDescription("GameView", "Game"));
-                defaultList.Add(new TabDescription("ProjectBrowser", "Project"));
-                defaultList.Add(new TabDescription("InspectorWindow", "Inspector"));
-                defaultList.Add(new TabDescription("ConsoleWindow", "Console"));
-                defaultList.Add(new TabDescription("ProfilerWindow", "Profiler"));
-                defaultList.Add(new TabDescription("LightingWindow", "Lighting"));
-                defaultList.Add(new TabDescription("ProjectSettingsWindow", "Project Settings"));
-
-
-                var curTab = EditorWindow.mouseOverWindow;
-
-                var curTabAlreadyAdded = defaultList.Any(r => r.menuItemName == curTab.titleContent.text.Replace("/", " \u2215 ").Trim(' ')) || customList.Any(r => r.menuItemName == curTab.titleContent.text.Replace("/", " \u2215 ").Trim(' '));
-
-
-                void addCurrentTabToList()
-                {
-                    customList.Add(new TabDescription(curTab));
-                    EditorPrefs.SetString(tabListKey, JsonUtility.ToJson(new TabDescription.ListHolderForJson(customList)));
-                }
-                void removeFromList(TabDescription t)
-                {
-                    customList.Remove(t);
-                    EditorPrefs.SetString(tabListKey, JsonUtility.ToJson(new TabDescription.ListHolderForJson(customList)));
-                }
-
-
-
-
-                var menu = new GenericMenu();
-
-                foreach (var tab in defaultList)
-                    menu.AddItem(new GUIContent(tab.menuItemName), false, () => tab.CreateWindow(GetDockArea(curTab), false));
-
-
-
-                menu.AddSeparator("");
-
-                foreach (var tab in customList)
-                    menu.AddItem(new GUIContent(tab.menuItemName), false, () => tab.CreateWindow(GetDockArea(curTab), false));
-
-
-
-                menu.AddSeparator("");
-
-                if (!curTabAlreadyAdded)
-                    menu.AddItem(new GUIContent("Add current tab to list"), false, addCurrentTabToList);
-
-                foreach (var tab in customList)
-                    menu.AddItem(new GUIContent("Remove from list/" + tab.menuItemName), false, () => removeFromList(tab));
-
-
-#if UNITY_2020_1_OR_NEWER
-                menu.ShowAsContext();
-#else
-                var pos = Event.current.mousePosition + EditorWindow.mouseOverWindow.position.position;
-                menu.DropDown(new Rect(pos.x ,pos.y ,0,0) );
-#endif
+                curEvent.Use();
 
             }
             void reopenTab()
             {
-                if (Event.current.type != EventType.KeyDown) return;
-                if (!Event.current.control && !Event.current.command) return;
-                if (Event.current.keyCode != KeyCode.T) return;
-                if (!Event.current.shift) return;
-                if (!EditorWindow.mouseOverWindow) return;
-                if (!VTabsMenuItems.reopenTabEnabled) return;
-                if (!closedTabsForReopening.Any()) return;
+                if (curEvent.keyCode != KeyCode.T) return;
+                if (curEvent.modifiers != (EventModifiers.Command | EventModifiers.Shift)
+                 && curEvent.modifiers != (EventModifiers.Control | EventModifiers.Shift)) return;
+
+                if (!VTabsMenu.reopenTabShortcutEnabled) return;
+
+                if (EditorWindow.mouseOverWindow.GetDockArea() is not Object dockArea) return;
+                if (!guis_byDockArea.TryGetValue(dockArea, out var gui)) return;
 
 
-                Event.current.Use();
+                gui.ReopenClosedTab();
 
-                closedTabsForReopening.Pop().CreateWindow();
+                curEvent.Use();
 
             }
 
-            keyPressed_();
-            closeTab();
             addTab();
+            closeTab();
             reopenTab();
 
         }
-        static bool keyPressed;
-        static Stack<TabDescription> closedTabsForReopening = new Stack<TabDescription>();
 
 
-        static void UpdateTabHeader(EditorWindow window)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void UpdateBrowserTitle(EditorWindow browser)
+        {
+            if (mi_VFavorites_CanBrowserBeWrapped != null && mi_VFavorites_CanBrowserBeWrapped.Invoke(null, new[] { browser }).Equals(false)) return;
+
+            var isLocked = browser.GetMemberValue<bool>("isLocked");
+            var isTitleDefault = browser.titleContent.text == "Project";
+
+            void setLockedTitle()
+            {
+                if (!isLocked) return;
+
+                var isOneColumn = browser.GetMemberValue<int>("m_ViewMode") == 0;
+
+                var path = isOneColumn ? browser.GetLockedFolderPath_oneColumn() : browser.InvokeMethod<string>("GetActiveFolderPath");
+                var guid = path.ToGuid();
+
+                var name = path.GetFilename();
+                var icon = EditorGUIUtility.FindTexture("Project");
+
+
+                void getIconFromVFolders()
+                {
+                    if (mi_VFolders_GetIcon == null) return;
+
+                    if (mi_VFolders_GetIcon.Invoke(null, new[] { guid }) is Texture2D iconFromVFolders)
+                        icon = iconFromVFolders;
+
+                }
+
+                getIconFromVFolders();
+
+
+                browser.titleContent = new GUIContent(name, icon);
+
+                t_DockArea.GetFieldValue<IDictionary>("s_GUIContents").Clear();
+
+            }
+            void setDefaultTitle()
+            {
+                if (isLocked) return;
+                if (isTitleDefault) return;
+
+                var name = "Project";
+                var icon = EditorGUIUtility.FindTexture("Project@2x");
+
+                browser.titleContent = new GUIContent(name, icon);
+
+                t_DockArea.GetFieldValue<IDictionary>("s_GUIContents").Clear();
+
+            }
+
+            setLockedTitle();
+            setDefaultTitle();
+
+        }
+
+        static void UpdatePropertyEditorTitle(EditorWindow propertyEditor)
+        {
+            var obj = propertyEditor.GetMemberValue<Object>("m_InspectedObject");
+
+            if (!obj) return;
+
+
+            var name = obj is Component component ? GetComponentName(component) : obj.name;
+            var sourceIcon = AssetPreview.GetMiniThumbnail(obj);
+            var adjustedIcon = sourceIcon;
+
+
+            void getSourceIconFromVHierarchy()
+            {
+                if (mi_VHierarchy_GetIcon == null) return;
+                if (obj is not GameObject gameObject) return;
+
+                if (mi_VHierarchy_GetIcon.Invoke(null, new[] { gameObject }) is Texture2D iconFromVHierarchy)
+                    sourceIcon = iconFromVHierarchy;
+
+            }
+            void getAdjustedIcon()
+            {
+                if (adjustedObjectIconsBySourceIid.TryGetValue(sourceIcon.GetInstanceID(), out adjustedIcon)) return;
+
+
+                adjustedIcon = new Texture2D(sourceIcon.width, sourceIcon.height, sourceIcon.format, sourceIcon.mipmapCount, false);
+                adjustedIcon.hideFlags = HideFlags.DontSave;
+                adjustedIcon.SetPropertyValue("pixelsPerPoint", (sourceIcon.width / 16f).RoundToInt());
+
+                Graphics.CopyTexture(sourceIcon, adjustedIcon);
+
+
+                adjustedObjectIconsBySourceIid[sourceIcon.GetInstanceID()] = adjustedIcon;
+
+            }
+
+
+            getSourceIconFromVHierarchy();
+            getAdjustedIcon();
+
+            propertyEditor.titleContent = new GUIContent(name, adjustedIcon);
+
+            propertyEditor.SetMemberValue("m_InspectedObject", null); // prevents further title updates from both internal code and vTabs
+
+            t_DockArea.GetFieldValue<IDictionary>("s_GUIContents").Clear();
+
+        }
+
+
+        public static void UpdateTitle(EditorWindow window)
         {
             if (window == null) return;
 
-            var isInspector = window.GetType() == inspectorType;
-            var isFolder = window.GetType() == browserType;
+            var isPropertyEditor = window.GetType() == t_PropertyEditor;
+            var isBrowser = window.GetType() == t_ProjectBrowser;
 
-            if (!isInspector && !isFolder) return;
-
-            if (!(bool)window.GetType().GetProperty("isLocked", maxBindingFlags).GetValue(window)) return;
+            if (!isPropertyEditor && !isBrowser) return;
 
 
-            string name = "";
-            Texture icon = null;
-            if (isInspector)
+            if (isPropertyEditor)
+                UpdatePropertyEditorTitle(window);
+
+            if (isBrowser)
+                if (window.GetPropertyValue<bool>("isLocked"))
+                    UpdateBrowserTitle(window);
+
+        }
+
+        static void UpdateAllBrowserTitles()
+        {
+            foreach (var r in allBrowsers)
+                UpdateBrowserTitle(r);
+        }
+        static void UpdateAllPropertyEditorTitles()
+        {
+            foreach (var r in allPropertyEditors)
+                UpdatePropertyEditorTitle(r);
+        }
+
+
+        static Dictionary<int, Texture2D> adjustedObjectIconsBySourceIid = new Dictionary<int, Texture2D>();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void WrappedBrowserOnGUI(EditorWindow browser)
+        {
+            var headerHeight = 26;
+            var footerHeight = 21;
+            var breadcrubsYOffset = .5f;
+
+            var headerRect = browser.position.SetPos(0, 0).SetHeight(headerHeight);
+            var footerRect = browser.position.SetPos(0, 0).SetHeightFromBottom(footerHeight);
+            var listAreaRect = browser.position.SetPos(0, 0).AddHeight(-footerHeight).AddHeightFromBottom(-headerHeight);
+
+            var breadcrumbsRect = headerRect.AddHeightFromBottom(-breadcrubsYOffset * 2);
+            var topGapRect = headerRect.SetHeight(breadcrubsYOffset * 2);
+
+            var breadcrumbsTint = isDarkTheme ? Greyscale(0, .05f) : Greyscale(0, .02f);
+            var topGapColor = isDarkTheme ? Greyscale(.24f, 1) : Greyscale(.8f, 1);
+
+            var isOneColumn = browser.GetMemberValue<int>("m_ViewMode") == 0;
+
+
+            void setRootForOneColumn()
             {
-                var obj = ((Object)inspectorType.GetMethod("GetInspectedObject", maxBindingFlags).Invoke(window, null));
+                if (!isOneColumn) return;
+                if (curEvent.isRepaint) return;
+                if (browser.GetMemberValue("m_AssetTree") is not object m_AssetTree) return;
+                if (m_AssetTree.GetMemberValue("data") is not object data) return;
 
-                if (obj == null) return;
+                var m_rootInstanceID = data.GetMemberValue<int>("m_rootInstanceID");
 
-                name = obj.name;
-                icon = EditorGUIUtility.FindTexture("UnityEditor.InspectorWindow");
+                void setInitial()
+                {
+                    if (m_rootInstanceID != 0) return;
+
+                    var folderPath = browser.GetLockedFolderPath_oneColumn();
+                    var folderIid = AssetDatabase.LoadAssetAtPath<Object>(folderPath).GetInstanceID();
+
+                    data.SetMemberValue("m_rootInstanceID", folderIid);
+
+                    m_AssetTree.InvokeMethod("ReloadData");
+
+                }
+                void update()
+                {
+                    if (m_rootInstanceID == 0) return;
+
+                    var folderIid = m_rootInstanceID;
+                    var folderPath = EditorUtility.InstanceIDToObject(folderIid).GetPath();
+
+                    browser.SetLockedFolderPath_oneColumn(folderPath);
+
+                    browser.GetMemberValue("m_SearchFilter")?.SetMemberValue("m_Folders", new[] { folderPath }); // needed for breadcrumbs to display correctly
+
+                }
+                void reset()
+                {
+                    if (browser.GetMemberValue<bool>("isLocked")) return;
+
+                    data.SetMemberValue("m_rootInstanceID", 0);
+                    browser.SetLockedFolderPath_oneColumn("Assets");
+
+                    m_AssetTree.InvokeMethod("ReloadData");
+
+                    // returns the browser to normal state on unlock
+
+                }
+
+                setInitial();
+                update();
+                reset();
+
             }
-            if (isFolder)
+            void handleFolderChange()
             {
-                name = ((string)window.GetType().GetMethod("GetActiveFolderPath", maxBindingFlags).Invoke(window, null)).GetName();
-                icon = EditorGUIUtility.FindTexture("Project");
+                if (isOneColumn) return;
+
+                void onBreadcrumbsClick()
+                {
+                    if (!curEvent.isMouseUp) return;
+                    if (!breadcrumbsRect.IsHovered()) return;
+
+                    browser.RecordUndo();
+
+                    toCallInGUI += () => UpdateBrowserTitle(browser);
+                    toCallInGUI += () => browser.Repaint();
+
+                }
+                void onDoubleclick()
+                {
+                    if (!curEvent.isMouseDown) return;
+                    if (curEvent.clickCount != 2) return;
+
+                    browser.RecordUndo();
+
+                    EditorApplication.delayCall += () => UpdateBrowserTitle(browser);
+                    EditorApplication.delayCall += () => browser.Repaint();
+
+                }
+                void onUndoRedo()
+                {
+                    if (!curEvent.isKeyDown) return;
+                    if (!curEvent.holdingCmdOrCtrl) return;
+                    if (curEvent.keyCode != KeyCode.Z) return;
+
+                    var curFolderGuid = browser.InvokeMethod<string>("GetActiveFolderPath").ToGuid();
+
+                    EditorApplication.delayCall += () =>
+                    {
+                        var delayedFolderGuid = browser.InvokeMethod<string>("GetActiveFolderPath").ToGuid();
+
+                        if (delayedFolderGuid == curFolderGuid) return;
+
+
+                        var folderIid = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(delayedFolderGuid)).GetInstanceID();
+
+                        browser.InvokeMethod("SetFolderSelection", new[] { folderIid }, false);
+
+                        UpdateBrowserTitle(browser);
+
+                    };
+
+                }
+
+                onBreadcrumbsClick();
+                onDoubleclick();
+                onUndoRedo();
+
+            }
+
+            void oneColumn()
+            {
+                if (!isOneColumn) return;
+
+
+
+
+                if (!browser.InvokeMethod<bool>("Initialized"))
+                    browser.InvokeMethod("Init");
+
+
+
+                var m_TreeViewKeyboardControlID = GUIUtility.GetControlID(FocusType.Keyboard);
+
+
+
+
+
+
+
+                browser.InvokeMethod("OnEvent");
+
+                if (curEvent.isMouseDown && browser.position.SetPos(0, 0).IsHovered())
+                    t_ProjectBrowser.SetFieldValue("s_LastInteractedProjectBrowser", browser);
+
+
+
+
+                // header
+                browser.SetFieldValue("m_ListHeaderRect", breadcrumbsRect);
+
+                if (curEvent.isRepaint)
+                    browser.InvokeMethod("BreadCrumbBar");
+
+                breadcrumbsRect.Draw(breadcrumbsTint);
+                topGapRect.Draw(topGapColor);
+
+                breadcrumbsRect.SetHeightFromBottom(1).Draw(Greyscale(.14f));
+
+
+
+
+                // footer
+                browser.SetFieldValue("m_BottomBarRect", footerRect);
+                browser.InvokeMethod("BottomBar");
+
+
+
+
+                // tree
+                browser.GetMemberValue("m_AssetTree")?.InvokeMethod("OnGUI", listAreaRect, m_TreeViewKeyboardControlID);
+
+
+
+
+
+
+
+
+
+
+
+
+                browser.InvokeMethod("HandleCommandEvents");
+
+
+
+            }
+            void twoColumns()
+            {
+                if (isOneColumn) return;
+
+
+
+                if (!browser.InvokeMethod<bool>("Initialized"))
+                    browser.InvokeMethod("Init");
+
+
+
+                var m_ListKeyboardControlID = GUIUtility.GetControlID(FocusType.Keyboard);
+
+                var startGridSize = browser.GetFieldValue("m_ListArea")?.GetMemberValue("gridSize");
+
+
+
+
+
+                browser.InvokeMethod("OnEvent");
+
+                if (curEvent.isMouseDown && browser.position.SetPos(0, 0).IsHovered())
+                    t_ProjectBrowser.SetFieldValue("s_LastInteractedProjectBrowser", browser);
+
+
+
+
+                // header
+                browser.SetFieldValue("m_ListHeaderRect", breadcrumbsRect);
+
+
+                browser.InvokeMethod("BreadCrumbBar");
+
+                breadcrumbsRect.Draw(breadcrumbsTint);
+                topGapRect.Draw(topGapColor);
+
+                breadcrumbsRect.SetHeightFromBottom(1).Draw(Greyscale(.14f));
+
+
+
+
+                // footer
+                browser.SetFieldValue("m_BottomBarRect", footerRect);
+                browser.InvokeMethod("BottomBar");
+
+
+
+
+                // list area
+                browser.GetFieldValue("m_ListArea").InvokeMethod("OnGUI", listAreaRect, m_ListKeyboardControlID);
+
+                // block grid size changes when ctrl-shift-scrolling
+                if (curEvent.holdingCmdOrCtrl)
+                    browser.GetFieldValue("m_ListArea").SetMemberValue("gridSize", startGridSize);
+
+
+
+
+
+                browser.SetFieldValue("m_StartGridSize", browser.GetFieldValue("m_ListArea").GetMemberValue("gridSize"));
+
+                browser.InvokeMethod("HandleContextClickInListArea", listAreaRect);
+                browser.InvokeMethod("HandleCommandEvents");
+
+
+
             }
 
 
-            GUIContent titleContent;
-            if (icon)
-                titleContent = new GUIContent(name, icon);
+            setRootForOneColumn();
+            handleFolderChange();
+
+            oneColumn();
+            twoColumns();
+
+        }
+
+
+        static void UpdateWrappingForBrowser(EditorWindow browser)
+        {
+            if (!browser.hasFocus) return;
+            if (mi_VFavorites_CanBrowserBeWrapped != null && mi_VFavorites_CanBrowserBeWrapped.Invoke(null, new[] { browser }).Equals(false)) return;
+
+            var isLocked = browser.GetMemberValue<bool>("isLocked");
+            var isWrapped = browser.GetMemberValue("m_Parent").GetMemberValue<Delegate>("m_OnGUI").Method == mi_WrappedBrowserOnGUI;
+
+            void wrap()
+            {
+                if (!isLocked) return;
+                if (isWrapped) return;
+
+                var hostView = browser.GetMemberValue("m_Parent");
+
+                var newDelegate = typeof(VTabs).GetMethod(nameof(WrappedBrowserOnGUI), maxBindingFlags).CreateDelegate(t_EditorWindowDelegate, browser);
+
+                hostView.SetMemberValue("m_OnGUI", newDelegate);
+
+                browser.Repaint();
+
+
+                browser.SetMemberValue("useTreeViewSelectionInsteadOfMainSelection", false);
+
+            }
+            void unwrap()
+            {
+                if (isLocked) return;
+                if (!isWrapped) return;
+
+                var hostView = browser.GetMemberValue("m_Parent");
+
+                var originalDelegate = hostView.InvokeMethod("CreateDelegate", "OnGUI");
+
+                hostView.SetMemberValue("m_OnGUI", originalDelegate);
+
+                browser.Repaint();
+
+            }
+
+            wrap();
+            unwrap();
+
+        }
+
+        static void UpdateWrappingForAllBrowsers()
+        {
+            foreach (var r in allBrowsers)
+                UpdateWrappingForBrowser(r);
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void HideTabScrollerButtons()
+        {
+            void getStyles()
+            {
+                if (leftScrollerStyle != null && rightScrollerStyle != null) return;
+
+                if (!guiStylesInitialized) TryInitializeGuiStyles();
+                if (!guiStylesInitialized) return;
+
+                if (typeof(GUISkin).GetFieldValue("current")?.GetFieldValue<Dictionary<string, GUIStyle>>("m_Styles")?.ContainsKey("dragtab scroller prev") != true) return;
+                if (typeof(GUISkin).GetFieldValue("current")?.GetFieldValue<Dictionary<string, GUIStyle>>("m_Styles")?.ContainsKey("dragtab scroller next") != true) return;
+
+
+                var t_Styles = typeof(Editor).Assembly.GetType("UnityEditor.DockArea+Styles");
+
+                leftScrollerStyle = t_Styles.GetFieldValue<GUIStyle>("tabScrollerPrevButton");
+                rightScrollerStyle = t_Styles.GetFieldValue<GUIStyle>("tabScrollerNextButton");
+
+            }
+            void createTexture()
+            {
+                if (clearTexture != null) return;
+
+                clearTexture = new Texture2D(1, 1);
+                clearTexture.hideFlags = HideFlags.DontSave;
+                clearTexture.SetPixel(0, 0, Color.clear);
+                clearTexture.Apply();
+
+            }
+            void assignTexture()
+            {
+                if (leftScrollerStyle == null) return;
+                if (rightScrollerStyle == null) return;
+
+                leftScrollerStyle.normal.background = clearTexture;
+                rightScrollerStyle.normal.background = clearTexture;
+
+            }
+
+            getStyles();
+            createTexture();
+            assignTexture();
+
+        }
+
+        static GUIStyle leftScrollerStyle;
+        static GUIStyle rightScrollerStyle;
+
+        static Texture2D clearTexture;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void ClosePropertyEditorsWithNonLoadableObjects()
+        {
+            foreach (var propertyEditor in allPropertyEditors)
+                if (propertyEditor.GetMemberValue<Object>("m_InspectedObject") == null)
+                    propertyEditor.Close();
+
+        }
+
+        static void LoadPropertyEditorInspectedObjects()
+        {
+            foreach (var propertyEditor in allPropertyEditors)
+                propertyEditor.InvokeMethod("LoadPersistedObject");
+
+        }
+
+        static void EnsureActiveTabsVisibleOnScroller()
+        {
+            foreach (var dockArea in allDockAreas)
+            {
+                if (!guis_byDockArea.TryGetValue(dockArea, out var gui)) continue;
+
+
+                var scrollPos = gui.GetTargetScrollPosition();
+
+                if (!scrollPos.Approx(0))
+                    scrollPos += gui.nonZeroTabScrollOffset;
+
+
+                dockArea.SetFieldValue("m_ScrollOffset", scrollPos);
+
+            }
+        }
+
+        public static void RepaintAllDockAreas()
+        {
+            foreach (var dockarea in allDockAreas)
+                dockarea.InvokeMethod("Repaint");
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        [UnityEditor.Callbacks.PostProcessBuild]
+        static void OnBuild(BuildTarget _, string __)
+        {
+            EditorApplication.delayCall += LoadPropertyEditorInspectedObjects;
+            EditorApplication.delayCall += UpdateAllPropertyEditorTitles;
+        }
+
+        static void OnDomainReloaded()
+        {
+            toCallInGUI += UpdateWrappingForAllBrowsers;
+            toCallInGUI += UpdateAllBrowserTitles;
+
+        }
+
+        static void OnSceneOpened(Scene _, OpenSceneMode __)
+        {
+            LoadPropertyEditorInspectedObjects();
+            ClosePropertyEditorsWithNonLoadableObjects();
+            UpdateAllPropertyEditorTitles();
+
+        }
+
+        static void OnProjectLoaded()
+        {
+            toCallInGUI += EnsureActiveTabsVisibleOnScroller;
+
+            UpdateAllPropertyEditorTitles();
+
+        }
+
+        static void OnFocusedWindowChanged()
+        {
+            if (EditorWindow.focusedWindow?.GetType() == t_ProjectBrowser)
+                UpdateWrappingForBrowser(EditorWindow.focusedWindow);
+
+        }
+
+        static void OnWindowUnmaximized()
+        {
+            UpdateAllPropertyEditorTitles();
+            UpdateAllBrowserTitles();
+
+            UpdateWrappingForAllBrowsers();
+
+
+            EnsureActiveTabsVisibleOnScroller();
+
+        }
+
+
+
+
+
+
+        static void CheckIfFocusedWindowChanged()
+        {
+            if (prevFocusedWindow != EditorWindow.focusedWindow)
+                OnFocusedWindowChanged();
+
+            prevFocusedWindow = EditorWindow.focusedWindow;
+        }
+
+        static EditorWindow prevFocusedWindow;
+
+
+
+        static void CheckIfWindowWasUnmaximized()
+        {
+            var isMaximized = EditorWindow.focusedWindow?.maximized == true;
+
+            if (!isMaximized && wasMaximized)
+                OnWindowUnmaximized();
+
+            wasMaximized = isMaximized;
+
+        }
+
+        static bool wasMaximized;
+
+
+
+        static void OnSomeGUI()
+        {
+            toCallInGUI?.Invoke();
+            toCallInGUI = null;
+
+            CheckIfFocusedWindowChanged();
+
+        }
+
+        static void ProjectWindowItemOnGUI(string _, Rect __) => OnSomeGUI();
+        static void HierarchyWindowItemOnGUI(int _, Rect __) => OnSomeGUI();
+
+        static Action toCallInGUI;
+
+
+
+        static void DelayCallLoop()
+        {
+            UpdateAllBrowserTitles();
+            UpdateWrappingForAllBrowsers();
+            HideTabScrollerButtons();
+
+            EditorApplication.delayCall -= DelayCallLoop;
+            EditorApplication.delayCall += DelayCallLoop;
+
+        }
+
+
+
+        static void Update()
+        {
+            CheckIfFocusedWindowChanged();
+            CheckIfWindowWasUnmaximized();
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void ComponentTabHeaderGUI(Editor editor)
+        {
+            if (editor.target is not Component component) return;
+
+            var headerRect = ExpandWidthLabelRect(height: 0).MoveY(-48).SetHeight(50).AddWidthFromMid(8);
+            var nameRect = headerRect.MoveX(43).MoveY(5).SetHeight(20).SetXMax(headerRect.xMax - 50);
+            var subtextRect = headerRect.MoveX(43).MoveY(22).SetHeight(20);
+
+
+            void hideName()
+            {
+                var maskRect = headerRect.AddWidthFromRight(-45).AddWidth(-50);
+
+                var maskColor = Greyscale(isDarkTheme ? .24f : .8f);
+
+                maskRect.Draw(maskColor);
+
+            }
+            void name()
+            {
+                SetLabelFontSize(13);
+
+                GUI.Label(nameRect, GetComponentName(component));
+
+                ResetLabelStyle();
+
+            }
+            void componentOf()
+            {
+                SetGUIEnabled(false);
+
+                GUI.Label(subtextRect, "Component of");
+
+                ResetGUIEnabled();
+
+            }
+            void goName()
+            {
+                var goNameRect = subtextRect.MoveX("Component of ".GetLabelWidth() - 3).SetWidth(component.gameObject.name.GetLabelWidth(isBold: true));
+
+                goNameRect.MarkInteractive();
+
+                SetGUIEnabled(goNameRect.IsHovered() && !mousePressedOnGoName);
+                SetLabelBold();
+
+                GUI.Label(goNameRect, component.gameObject.name);
+
+                ResetGUIEnabled();
+                ResetLabelStyle();
+
+
+
+                if (curEvent.isMouseDown && goNameRect.IsHovered())
+                {
+                    mousePressedOnGoName = true;
+                    curEvent.Use();
+                }
+
+                if (curEvent.isMouseUp)
+                {
+                    if (mousePressedOnGoName)
+                        EditorGUIUtility.PingObject(component.gameObject);
+
+                    mousePressedOnGoName = false;
+                    curEvent.Use();
+                }
+
+                if (curEvent.isMouseLeaveWindow || (!curEvent.isLayout && !goNameRect.Resize(1).IsHovered()))
+                    mousePressedOnGoName = false;
+
+            }
+
+
+
+            hideName();
+            name();
+            componentOf();
+            goName();
+
+            Space(-4);
+
+        }
+
+        static bool mousePressedOnGoName;
+
+        static string GetComponentName(Component component)
+        {
+            if (!component) return "";
+
+            var name = new GUIContent(EditorGUIUtility.ObjectContent(component, component.GetType())).text;
+
+            name = name.Substring(name.LastIndexOf('(') + 1);
+            name = name.Substring(0, name.Length - 1);
+
+            return name;
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void SetupExtraScrollerSpace()
+        {
+
+            var action = t_WindowAction.GetMethod("CreateWindowMenuItem", maxBindingFlags).Invoke(null, new[] { "vTabs dummy for creating extra space for + button", null, null });
+
+
+            var extraSpaceAmount = 21f;
+
+            action.SetMemberValue("width", extraSpaceAmount);
+
+
+            var mi_ShouldCreateExtraSpace = typeof(VTabs).GetMethod("ShouldCreateExtraSpace", maxBindingFlags);
+
+            var funcDelegate = Delegate.CreateDelegate(t_ValidateHandler, mi_ShouldCreateExtraSpace);
+
+            action.SetMemberValue("validateHandler", funcDelegate);
+
+
+
+
+            var defaultActions = t_HostView.GetMemberValue<System.Array>("s_windowActions") ?? t_HostView.InvokeMethod<System.Array>("FetchWindowActionFromAttribute");
+
+            var newActions = System.Array.CreateInstance(t_WindowAction, defaultActions.Length + 1);
+
+            System.Array.Copy(defaultActions, newActions, defaultActions.Length);
+
+            newActions.SetValue(action, defaultActions.Length);
+
+
+            t_HostView.SetMemberValue("s_windowActions", newActions);
+
+        }
+
+        static bool ShouldCreateExtraSpace(EditorWindow window, object _) => VTabsMenu.addTabButtonEnabled && window == window.GetDockArea().GetTabs()?.Last();
+
+
+
+
+
+
+
+
+
+
+
+
+
+        static void TryInitializeGuiStyles() => EditorWindow.focusedWindow?.SendEvent(EditorGUIUtility.CommandEvent(""));
+
+        static bool guiStylesInitialized => typeof(GUI).GetFieldValue("s_Skin") != null;
+
+
+
+
+        static Object GetDockArea(this EditorWindow window)
+        {
+            var parent = window?.GetFieldValue<Object>("m_Parent");
+
+            if (parent?.GetType() == t_DockArea)
+                return parent;
             else
-                titleContent = new GUIContent("  " + name + "");
+                return null;
 
-
-            window.titleContent = titleContent;
         }
-        static void UpdateBrowserTabHeaders()
+
+        public static List<EditorWindow> GetTabs(this Object dockArea) => dockArea?.GetFieldValue<List<EditorWindow>>("m_Panes");
+
+
+
+
+        public static string GetLockedFolderPath_oneColumn(this EditorWindow browser)
         {
-            foreach (var browser in lockedBrowsers)
-                UpdateTabHeader(browser);
+            var path = browser.GetMemberValue<string[]>("m_LastFolders")?.FirstOrDefault();
+
+            if (path == null || path == "Assets")
+                path = browser.GetMemberValue("m_SearchFilter")?.GetMemberValue<string[]>("m_Folders")?.FirstOrDefault() ?? "Assets"; // to migrate locked folder paths from 2.0.14
+
+            return path;
+
+            // unlike in two column layout, there's no such concept as active folder path in one column
+            // so we have to serialize locked folder path in some unused field
+            // m_LastFolders appears to work fine for this purpose
+            // m_SearchFilter was used before v2.0.15 but could get changed when moving/creating/deleting assets
+
         }
-        static void UpdateInspectorTabHeaders()
+
+        public static void SetLockedFolderPath_oneColumn(this EditorWindow browser, string folderPath)
         {
-            foreach (var insepctor in lockedInspectors)
-                UpdateTabHeader(insepctor);
-        }
-        static void UpdateInspectorTabHeadersPreventingReset()
-        {
-            var prevFocused = EditorWindow.focusedWindow;
-            foreach (var dockAreaGroup in lockedInspectors.GroupBy(r => GetDockArea(r)))
-            {
-                var tabsInDockArea = dockAreaType.GetField("m_Panes", maxBindingFlags).GetValue(dockAreaGroup.Key) as List<EditorWindow>;
-                var prevSelected = tabsInDockArea[(int)dockAreaGroup.Key.GetType().GetField("m_Selected", maxBindingFlags).GetValue(dockAreaGroup.Key)];
-
-                foreach (var inspector in dockAreaGroup)
-                {
-                    inspector.Focus();
-                    inspector.SendEvent(EditorGUIUtility.CommandEvent(""));
-
-                    UpdateTabHeader(inspector);
-                }
-
-                prevSelected.Focus();
-                if (prevSelected.GetType() == inspectorType)
-                {
-                    prevSelected.SendEvent(EditorGUIUtility.CommandEvent(""));
-
-                    UpdateTabHeader(prevSelected);
-                }
-            }
-            prevFocused?.Focus();
-        }
-
-        static void EnsureFocusedTabVisibleOnScroller()
-        {
-            if (!EditorWindow.focusedWindow) return;
-            if (!EditorWindow.focusedWindow.docked) return;
-            if (EditorWindow.focusedWindow.maximized) return;
-
-            var dockArea = GetDockArea(EditorWindow.focusedWindow);
-
-            var scrollOffsetField = dockArea.GetType().GetField("m_ScrollOffset", maxBindingFlags);
-
-            var scrollOffset = (float)scrollOffsetField.GetValue(dockArea);
-
-#if UNITY_2020_1_OR_NEWER
-            var getWidth = dockArea.GetType().GetMethods(maxBindingFlags).First(r => r.Name == "GetTabWidth" && r.GetParameters().Any(rr => rr.ParameterType == typeof(EditorWindow)));
-#else
-            var getWidth = dockArea.GetType().GetMethods(maxBindingFlags).First(r => r.Name == "GetTabWidth");
-#endif
-
-            var tabStyle = dockArea.GetType().GetField("tabStyle", maxBindingFlags).GetValue(dockArea);
-
-            var totalWidth = ((Rect)dockArea.GetType().GetField("m_TabAreaRect", maxBindingFlags).GetValue(dockArea)).width;
-            var x0 = 0f;
-            var x1 = 0f;
-
-            var tabs = GetTabList(EditorWindow.focusedWindow);
-            for (int i = 0; i < tabs.Count; i++)
-            {
-                var tab = tabs[i];
-
-#if UNITY_2020_1_OR_NEWER
-                var width = (float)getWidth.Invoke(dockArea, new[] { tabStyle, tab });
-#else
-                var width = (float)getWidth.Invoke(dockArea, new[] { tabStyle, i });
-#endif               
-
-
-                x0 = x1;
-                x1 += width + 1;
-
-                if (tab == EditorWindow.focusedWindow) break;
-            }
-
-            scrollOffset = Mathf.Min(scrollOffset, x0 - 12);
-            scrollOffset = Mathf.Max(scrollOffset, 0);
-            scrollOffset = Mathf.Max(scrollOffset, x1 - totalWidth + 12);
-
-            scrollOffsetField.SetValue(dockArea, scrollOffset);
-
+            browser.SetMemberValue("m_LastFolders", new[] { folderPath });
         }
 
 
 
-        static void HandleSelectionChangeOnGUI()
-        {
-            if (selectionChangeHandled) return;
-
-            selectionChangeHandled = true;
-
-            UpdateInspectorTabHeaders();
-
-        }
-        static void FinishedDefaultHeaderGUI(Editor editor) => HandleSelectionChangeOnGUI();
-        static void ProjectWindowItemOnGUI(string guid, Rect rect) => HandleSelectionChangeOnGUI();
-        static bool selectionChangeHandled = true;
-
-        static void OnPlaymodeStateChanged(PlayModeStateChange state) => EditorApplication.delayCall += UpdateInspectorTabHeaders;
-
-        static void OnSceneOpened(UnityEngine.SceneManagement.Scene scene, UnityEditor.SceneManagement.OpenSceneMode mode) => UpdateInspectorTabHeaders();
 
 
 
 
-#if !DISABLED
-        [InitializeOnLoadMethod]
-#endif
-        static void Init()
-        {
-            var globalEventHandler = typeof(EditorApplication).GetField("globalEventHandler", maxBindingFlags);
-            globalEventHandler.SetValue(null, (EditorApplication.CallbackFunction)globalEventHandler.GetValue(null) + OnKeyEvent);
-
-            EditorApplication.update -= Update;
-            EditorApplication.update += Update;
-
-            EditorApplication.delayCall += UpdateDelayedMousePosition;
-
-            Editor.finishedDefaultHeaderGUI -= FinishedDefaultHeaderGUI;
-            Editor.finishedDefaultHeaderGUI += FinishedDefaultHeaderGUI;
-            EditorApplication.projectWindowItemOnGUI -= ProjectWindowItemOnGUI;
-            EditorApplication.projectWindowItemOnGUI += ProjectWindowItemOnGUI;
-
-            EditorApplication.playModeStateChanged -= OnPlaymodeStateChanged;
-            EditorApplication.playModeStateChanged += OnPlaymodeStateChanged;
-
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened -= OnSceneOpened;
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += OnSceneOpened;
-
-            Selection.selectionChanged += () => selectionChangeHandled = false;
 
 
-            EditorApplication.delayCall += UpdateBrowserTabHeaders;
-            EditorApplication.delayCall += UpdateInspectorTabHeadersPreventingReset;
-        }
+
 
 
 
 
         [System.Serializable]
-        class TabDescription
+        public class TabInfo
         {
-            public string typeName;
-            public object dockArea;
-            int tabIndex;
-            public string menuItemName;
-
-            public string objectGuid = "";
-            public int objectInstanceId;
-            public bool isLockedToObject;
-
-            public bool isInspector => typeName == inspectorType.Name;
-            public bool isBrowser => typeName == browserType.Name;
-
-
-
-            public TabDescription(EditorWindow window)
+            public TabInfo(EditorWindow window)
             {
                 typeName = window.GetType().Name;
-                dockArea = typeof(EditorWindow).GetField("m_Parent", maxBindingFlags).GetValue(window);
-                tabIndex = ((List<EditorWindow>)dockAreaType.GetField("m_Panes", maxBindingFlags).GetValue(dockArea)).IndexOf(window);
+                originalDockArea = window.GetDockArea();
+                originalTabIndex = window.GetDockArea().GetTabs().IndexOf(window);
+                wasFocused = window.hasFocus;
+                originalTitle = window.titleContent.text;
                 menuItemName = window.titleContent.text.Replace("/", " \u2215 ").Trim(' ');
 
-                if (window.GetType() == browserType)
+                if (isBrowser)
                 {
-                    var path = (string)browserType.GetMethod("GetActiveFolderPath", maxBindingFlags).Invoke(window, null);
-                    objectGuid = AssetDatabase.AssetPathToGUID(path);
+                    isLocked = window.GetPropertyValue<bool>("isLocked");
 
-                    isLockedToObject = (bool)browserType.GetProperty("isLocked", maxBindingFlags).GetValue(window);
+
+                    savedGridSize = window.GetFieldValue<int>("m_StartGridSize");
+
+                    isGridSizeSaved = true;
+
+
+                    savedLayout = window.GetMemberValue<int>("m_ViewMode");
+
+                    isLayoutSaved = true;
+
+
+                    var folderPath = savedLayout == 0 ? window.GetLockedFolderPath_oneColumn()                   // one column
+                                                      : window.InvokeMethod<string>("GetActiveFolderPath");     // two columns
+                    folderGuid = folderPath.ToGuid();
 
                 }
 
-                if (window.GetType() == inspectorType)
-                    if (inspectorType.GetMethod("GetInspectedObject", maxBindingFlags).Invoke(window, null) is Object obj)
-                    {
-                        var path = obj.GetPath();
-
-                        if (path != "")
-                            objectGuid = AssetDatabase.AssetPathToGUID(path);
-                        else
-                            objectInstanceId = obj.GetInstanceID();
-
-                        isLockedToObject = (bool)inspectorType.GetProperty("isLocked", maxBindingFlags).GetValue(window);
-
-                    }
+                if (isPropertyEditor)
+                    globalId = new GlobalID(window.GetMemberValue<string>("m_GlobalObjectId"));
 
             }
-            public TabDescription(string typeName, string menuItemName)
+            public TabInfo(Object lockTo)
             {
-                this.typeName = typeName;
-                this.menuItemName = menuItemName;
-            }
-            public TabDescription(Object lockTo)
-            {
-                var isFolder = lockTo.GetType() == typeof(DefaultAsset);
-
-                if (isFolder)
-                {
-                    typeName = browserType.Name;
-                    objectGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(lockTo));
-                }
-                else
-                {
-                    typeName = inspectorType.Name;
-                    objectInstanceId = lockTo.GetInstanceID();
-                }
-
-                isLockedToObject = true;
-            }
-
-
-            public EditorWindow CreateWindow(object dockArea, bool atStoredTabIndex = true)
-            {
-                if (dockArea == null) return null;
-
-                var s_LastInteractedProjectBrowser = isBrowser ? browserType.GetField("s_LastInteractedProjectBrowser", maxBindingFlags).GetValue(null) : null;
-
-                var window = (EditorWindow)ScriptableObject.CreateInstance(typeName);
-
-                if (atStoredTabIndex)
-                {
-                    var totalTabs = ((List<EditorWindow>)dockAreaType.GetField("m_Panes", maxBindingFlags).GetValue(dockArea)).Count;
-                    var index = Mathf.Clamp(tabIndex, 0, totalTabs);
-                    dockAreaType.GetMethods(maxBindingFlags).First(r => r.Name == "AddTab" && r.GetParameters().Count() == 3).Invoke(dockArea, new[] { tabIndex, (object)window, true });
-                }
-                else
-                    dockAreaType.GetMethods(maxBindingFlags).First(r => r.Name == "AddTab" && r.GetParameters().Count() == 2).Invoke(dockArea, new[] { (object)window, true });
+                isLocked = true;
+                typeName = lockTo is DefaultAsset ? t_ProjectBrowser.Name : t_PropertyEditor.Name;
 
 
                 if (isBrowser)
-                {
-                    browserType.GetMethod("Init", maxBindingFlags).Invoke(window, null);
+                    folderGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(lockTo));
 
-                    if (s_LastInteractedProjectBrowser != null)
-                    {
-                        var fi_m_DirectoriesAreaWidth = browserType.GetField("m_DirectoriesAreaWidth", maxBindingFlags);
-                        fi_m_DirectoriesAreaWidth.SetValue(window, fi_m_DirectoriesAreaWidth.GetValue(s_LastInteractedProjectBrowser));
+                if (isPropertyEditor)
+                    globalId = lockTo.GetGlobalID();
 
+#if UNITY_2021_2_OR_NEWER
+                if (isPropertyEditor)
+                    if (StageUtility.GetCurrentStage() is PrefabStage && globalId.ToString().Contains("00000000000000000000000000000000"))
+                        lockedPrefabAssetObject = lockTo;
+#endif
 
-                        var fi_m_ListArea = browserType.GetField("m_ListArea", maxBindingFlags);
-                        var pi_gridSize = fi_m_ListArea.FieldType.GetProperty("gridSize", maxBindingFlags);
-
-                        var listAreaSource = fi_m_ListArea.GetValue(s_LastInteractedProjectBrowser);
-                        var listAreaDest = fi_m_ListArea.GetValue(window);
-
-                        if (listAreaSource != null && listAreaDest != null)
-                            pi_gridSize.SetValue(listAreaDest, pi_gridSize.GetValue(listAreaSource));
-
-                    }
-
-                    if (objectGuid != "")
-                    {
-                        var iid = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(objectGuid)).GetInstanceID();
-
-                        var m_ListAreaState = browserType.GetField("m_ListAreaState", maxBindingFlags).GetValue(window);
-
-                        m_ListAreaState.GetType().GetField("m_SelectedInstanceIDs").SetValue(m_ListAreaState, new List<int> { iid });
-
-                        browserType.GetMethod("OpenSelectedFolders", maxBindingFlags).Invoke(null, null);
-
-
-                        if (isLockedToObject)
-                            browserType.GetProperty("isLocked", maxBindingFlags).SetValue(window, true, null);
-                    }
-
-                }
-
-                if (isInspector)
-                {
-                    Object obj = null;
-
-                    if (objectInstanceId != 0)
-                        obj = EditorUtility.InstanceIDToObject(objectInstanceId);
-                    else
-                        obj = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(objectGuid));
-
-                    if (obj)
-                    {
-                        var prev = Selection.activeObject;
-                        Selection.activeObject = obj;
-
-                        inspectorType.GetProperty("isLocked", maxBindingFlags).SetValue(window, true, null);
-
-                        Selection.activeObject = prev;
-                    }
-
-                }
-
-
-
-                if (isBrowser)
-                    UpdateTabHeader(window);
-
-                window.Focus();
-
-                if (isInspector)
-                    UpdateInspectorTabHeadersPreventingReset();
-
-                EnsureFocusedTabVisibleOnScroller();
-
-
-                return window;
             }
-            public EditorWindow CreateWindow(bool atStoredTabIndex = true) => CreateWindow(dockArea, atStoredTabIndex);
+            public TabInfo(string typeName, string menuItemName) { this.typeName = typeName; this.menuItemName = menuItemName; }
+
+            public string typeName;
+            public string menuItemName;
+            public object originalDockArea;
+            public int originalTabIndex;
+            public string originalTitle;
+            public bool wasFocused;
+
+            public bool isBrowser => typeName == t_ProjectBrowser.Name;
+            public bool isLocked;
+            public string folderGuid = "";
+            public int savedGridSize;
+            public int savedLayout;
+            public bool isGridSizeSaved = false;
+            public bool isLayoutSaved = false;
+
+            public bool isPropertyEditor => typeName == t_PropertyEditor.Name;
+            public GlobalID globalId;
+            public Object lockedPrefabAssetObject;
+
+        }
+
+        [System.Serializable]
+        class TabInfoList { public List<TabInfo> list = new List<TabInfo>(); }
 
 
 
-            [System.Serializable]
-            public class ListHolderForJson
-            {
-                public List<TabDescription> list = new List<TabDescription>();
-                public ListHolderForJson(List<TabDescription> list) => this.list = list;
-            }
+
+
+
+
+
+
+
+
+        [InitializeOnLoadMethod]
+        static void Init()
+        {
+            if (VTabsMenu.pluginDisabled) return;
+
+
+            EditorApplication.update -= UpdateGUIs;
+            EditorApplication.update += UpdateGUIs;
+
+
+
+            // shortcuts
+            var globalEventHandler = typeof(EditorApplication).GetFieldValue<EditorApplication.CallbackFunction>("globalEventHandler");
+            typeof(EditorApplication).SetFieldValue("globalEventHandler", (globalEventHandler - Shortcuts) + Shortcuts);
+
+
+            // component tabs
+            Editor.finishedDefaultHeaderGUI -= ComponentTabHeaderGUI;
+            Editor.finishedDefaultHeaderGUI += ComponentTabHeaderGUI;
+
+
+
+
+            // state change detectors
+            var projectWasLoaded = typeof(EditorApplication).GetFieldValue<UnityEngine.Events.UnityAction>("projectWasLoaded");
+            typeof(EditorApplication).SetFieldValue("projectWasLoaded", (projectWasLoaded - OnProjectLoaded) + OnProjectLoaded);
+
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened -= OnSceneOpened;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += OnSceneOpened;
+
+            EditorApplication.projectWindowItemOnGUI -= ProjectWindowItemOnGUI;
+            EditorApplication.projectWindowItemOnGUI += ProjectWindowItemOnGUI;
+
+            EditorApplication.hierarchyWindowItemOnGUI -= HierarchyWindowItemOnGUI;
+            EditorApplication.hierarchyWindowItemOnGUI += HierarchyWindowItemOnGUI;
+
+            EditorApplication.delayCall -= DelayCallLoop;
+            EditorApplication.delayCall += DelayCallLoop;
+
+            EditorApplication.update -= Update;
+            EditorApplication.update += Update;
+
+            EditorApplication.quitting -= VTabsCache.Save;
+            EditorApplication.quitting += VTabsCache.Save;
+
+
+
+            // EditorApplication.delayCall += () => VTabsAddTabWindow.UpdateAllEntries();
+
+            EditorApplication.delayCall += () => UpdateStyleSheet();
+
+            SetupExtraScrollerSpace();
+
+            OnDomainReloaded();
+
         }
 
 
+        public static IEnumerable<EditorWindow> allBrowsers => _allBrowsers ??= t_ProjectBrowser.GetFieldValue<IList>("s_ProjectBrowsers").Cast<EditorWindow>();
+        public static IEnumerable<EditorWindow> _allBrowsers;
 
-        static object GetDockArea(EditorWindow window) => typeof(EditorWindow).GetField("m_Parent", maxBindingFlags).GetValue(window);
-        static object GetDockArea() => GetDockArea(EditorWindow.mouseOverWindow);
-        static List<EditorWindow> GetTabList(EditorWindow window) => dockAreaType.GetField("m_Panes", maxBindingFlags).GetValue(GetDockArea(window)) as List<EditorWindow>;
-        static List<EditorWindow> GetTabList() => GetTabList(EditorWindow.mouseOverWindow);
+        public static IEnumerable<EditorWindow> allPropertyEditors => Resources.FindObjectsOfTypeAll(t_PropertyEditor).Where(r => r.GetType().BaseType == typeof(EditorWindow)).Cast<EditorWindow>();
+
+        public static List<EditorWindow> allEditorWindows
+        {
+            get
+            {
+                if (typeof(EditorWindow).GetPropertyInfo("activeEditorWindows") == null) // this variable doesn't exist in early 2022.3 versions, even though UnityCsReference repo says it does
+                    return Resources.FindObjectsOfTypeAll(typeof(EditorWindow)).Cast<EditorWindow>().ToList();
+
+                return _allEditorWindows ?? typeof(EditorWindow).GetMemberValue<List<EditorWindow>>("activeEditorWindows");
+            }
+        }
+        public static List<EditorWindow> _allEditorWindows;
+
+        public static IEnumerable<Object> allDockAreas => allEditorWindows.Where(r => r.hasFocus && r.docked && !r.maximized).Select(r => r.GetMemberValue<Object>("m_Parent"));
 
 
-        static List<EditorWindow> lockedBrowsers => Resources.FindObjectsOfTypeAll(browserType).Where(r => (bool)_isLockedBrowserProp.GetValue(r)).Select(r => r as EditorWindow).ToList();
-        static PropertyInfo _isLockedBrowserProp = browserType.GetProperty("isLocked", maxBindingFlags);
 
-        static List<EditorWindow> lockedInspectors => ((EditorWindow[])_getAllInspectorsMethod.Invoke(null, null)).Where(r => (bool)_isLockedInspectorProp.GetValue(r)).ToList();
-        static MethodInfo _getAllInspectorsMethod = inspectorType.GetMethod("GetAllInspectorWindows", maxBindingFlags);
-        static PropertyInfo _isLockedInspectorProp = inspectorType.GetProperty("isLocked", maxBindingFlags);
+        public static Type t_DockArea = typeof(Editor).Assembly.GetType("UnityEditor.DockArea");
+        public static Type t_PropertyEditor = typeof(Editor).Assembly.GetType("UnityEditor.PropertyEditor");
+        public static Type t_ProjectBrowser = typeof(Editor).Assembly.GetType("UnityEditor.ProjectBrowser");
+        public static Type t_SceneHierarchyWindow = typeof(Editor).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
+        public static Type t_InspectorWindow = typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+        public static Type t_WindowAction = typeof(Editor).Assembly.GetType("UnityEditor.WindowAction");
+        public static Type t_HostView = typeof(Editor).Assembly.GetType("UnityEditor.HostView");
+        public static Type t_EditorWindowDelegate = t_HostView.GetNestedType("EditorWindowDelegate", maxBindingFlags);
+        public static Type t_ValidateHandler = t_WindowAction.GetNestedType("ValidateHandler", maxBindingFlags);
+        public static Type t_EditorWindowShowButtonDelegate = t_HostView.GetNestedType("EditorWindowShowButtonDelegate", maxBindingFlags);
+
+        public static Type t_VHierarchy = Type.GetType("VHierarchy.VHierarchy") ?? Type.GetType("VHierarchy.VHierarchy, VHierarchy, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+        public static Type t_VFolders = Type.GetType("VFolders.VFolders") ?? Type.GetType("VFolders.VFolders, VFolders, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+        public static Type t_VFavorites = Type.GetType("VFavorites.VFavorites") ?? Type.GetType("VFavorites.VFavorites, VFavorites, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+
+        public static MethodInfo mi_WrappedBrowserOnGUI = typeof(VTabs).GetMethod(nameof(WrappedBrowserOnGUI), maxBindingFlags);
+
+        public static MethodInfo mi_VFolders_GetIcon = t_VFolders?.GetMethod("GetSmallFolderIcon_forVTabs", maxBindingFlags);
+        public static MethodInfo mi_VHierarchy_GetIcon = t_VHierarchy?.GetMethod("GetIcon_forVTabs", maxBindingFlags);
+        public static MethodInfo mi_VFavorites_BeforeWindowCreated = t_VFavorites?.GetMethod("BeforeWindowCreated_byVTabs", maxBindingFlags);
+        public static MethodInfo mi_VFavorites_CanBrowserBeWrapped = t_VFavorites?.GetMethod("CanBrowserBeWrapped_byVTabs", maxBindingFlags);
 
 
-        static System.Type dockAreaType => typeof(Editor).Assembly.GetType("UnityEditor.DockArea");
-        static System.Type inspectorType => typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
-        static System.Type browserType => typeof(Editor).Assembly.GetType("UnityEditor.ProjectBrowser");
-        static System.Type hierarchyType => typeof(Editor).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
 
 
-        const string version = "1.0.12";
+
+        const string version = "2.1.1";
 
     }
 }
