@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using UTool.TabSystem;
+using TangibleTable.DualDisplay;
 
 namespace TangibleTable
 {
@@ -22,7 +23,7 @@ namespace TangibleTable
         [SerializeField] private Vector2Int _screenResolution = new Vector2Int(3840, 1080);
         
         [Tooltip("All TUIO visualizers in the scene")]
-        [SerializeField] private List<CustomTuio11Visualizer> _tuioVisualizers = new List<CustomTuio11Visualizer>();
+        [SerializeField] private List<DualDisplayTuio11Visualizer> _tuioVisualizers = new List<DualDisplayTuio11Visualizer>();
         
         private void Start()
         {

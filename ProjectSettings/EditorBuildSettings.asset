@@ -5,10 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/Main.unity
-    guid: 620db257a8f53684eb782cc513037868
   - enabled: 1
-    path: Assets/Scenes/TUIO.unity
-    guid: 8ea38a69e43e4074dacc154de19be225
+    path: Assets/Scenes/TUIO_SingleScreen.unity
+    guid: 20b94eb81c1d82848b3bd85f77cb046a
   m_configObjects: {}
