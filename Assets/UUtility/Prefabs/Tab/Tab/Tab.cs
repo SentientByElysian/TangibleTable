@@ -71,13 +71,13 @@ namespace UTool.TabSystem
             ValidateTabVariables();
         }
 
-        public TVariable GetVariable(TabVariableName variableName)
+        public TVariable GetVariable(string variableName)
         {
-            TVariable variable = tabVariables.Find(x => x.tVariableName == variableName);
-
+            TVariable variable = tabVariables.Find(x => x.variableName == variableName);
+    
             if (variable == null)
-                Debug.LogError($"Variable '{variableName}' Could Not Be Found In Tab '{tabName}'");
-
+                Debug.LogWarning($"Variable '{variableName}' could not be found in Tab '{tabName}'");
+    
             return variable;
         }
 

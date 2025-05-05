@@ -9,36 +9,34 @@ namespace TangibleTable.Shared
     /// Simple component to display properties of tuio objects in the scene and set a random color for easier
     /// distinction between objects or touches.
     /// </summary>
-    [RequireComponent(typeof(TuioBehaviour))]
+    [RequireComponent(typeof(CustomTuioBehaviour))]
     public class TuioDebug : MonoBehaviour
     {
         [SerializeField] private TMP_Text _debugText;
         [SerializeField] private MaskableGraphic _background;
 
-        private TuioBehaviour _tuioBehaviour;
-        private CustomTuio11Behaviour _customBehaviour;
+        private CustomTuioBehaviour _customBehaviour;
 
         public Color tuioColor = Color.white;
-        private bool _isCursor = false;
+        [SerializeField] private bool _isCursor = false;
         private bool _wasVisible = true;
         private bool _startComplete = false;
 
         private void Start()
         {
-            _tuioBehaviour = GetComponent<TuioBehaviour>();
-            _customBehaviour = GetComponent<CustomTuio11Behaviour>();
+            _customBehaviour = GetComponent<CustomTuioBehaviour>();
             
-            // Check if this is a cursor
-            if (_customBehaviour != null)
-            {
-                // Use reflection to get the _isCursor field
-                var isCursorField = _customBehaviour.GetType().GetField("_isCursor", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (isCursorField != null)
-                {
-                    _isCursor = (bool)isCursorField.GetValue(_customBehaviour);
-                }
-            }
+            // // Check if this is a cursor
+            // if (_customBehaviour != null)
+            // {
+            //     // Use reflection to get the _isCursor field
+            //     var isCursorField = _customBehaviour.GetType().GetField("_isCursor", 
+            //         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            //     if (isCursorField != null)
+            //     {
+            //         _isCursor = (bool)isCursorField.GetValue(_customBehaviour);
+            //     }
+            // }
             
             // Set initial color
             if (_background != null)
@@ -55,9 +53,9 @@ namespace TangibleTable.Shared
         private void Update()
         {
             // Update debug text
-            if (_tuioBehaviour != null && _debugText != null)
+            if (_customBehaviour != null && _debugText != null)
             {
-                _debugText.text = _tuioBehaviour.DebugText();
+                _debugText.text = _customBehaviour.DebugText();
             }
             
             // Check visibility based on settings

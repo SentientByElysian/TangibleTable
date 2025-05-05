@@ -54,7 +54,7 @@ namespace TangibleTable.DualDisplay
             public bool IsFirstDisplay;
         }
         
-        private readonly Dictionary<uint, CustomTuio11Behaviour> _tuioBehaviours = new Dictionary<uint, CustomTuio11Behaviour>();
+        private readonly Dictionary<uint, CustomTuioBehaviour> _tuioBehaviours = new Dictionary<uint, CustomTuioBehaviour>();
         private readonly Dictionary<uint, CursorInfo> _tuioCursors = new Dictionary<uint, CursorInfo>();
 
         private Tuio11Dispatcher Dispatcher => (Tuio11Dispatcher)_tuioSessionBehaviour.TuioDispatcher;
@@ -131,7 +131,7 @@ namespace TangibleTable.DualDisplay
         {
             var objectBehaviour = Instantiate(_objectPrefab, transform);
             
-            var customBehaviour = objectBehaviour.gameObject.AddComponent<CustomTuio11Behaviour>();
+            var customBehaviour = objectBehaviour.gameObject.AddComponent<CustomTuioBehaviour>();
             customBehaviour.Initialize(tuioObject, _isFirstDisplay);
             _tuioBehaviours.Add(tuioObject.SessionId, customBehaviour);
             
@@ -185,7 +185,7 @@ namespace TangibleTable.DualDisplay
                 }
                 
                 // Add our custom behaviour instead
-                var customBehaviour = cursorObj.AddComponent<CustomTuio11Behaviour>();
+                var customBehaviour = cursorObj.AddComponent<CustomTuioBehaviour>();
                 customBehaviour.Initialize(tuioCursor, isFirstDisplay);
                 
                 // Store in dictionary

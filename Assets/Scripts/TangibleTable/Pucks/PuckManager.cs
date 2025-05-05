@@ -26,7 +26,7 @@ namespace TangibleTable.Pucks
         // Dictionary to track active pucks and their states
         private Dictionary<uint, PuckState> _activePucks = new Dictionary<uint, PuckState>();
         // Dictionary to track active pucks and their TUIO objects
-        private Dictionary<uint, CustomTuio11Behaviour> _activePuckBehaviours = new Dictionary<uint, CustomTuio11Behaviour>();
+        private Dictionary<uint, CustomTuioBehaviour> _activePuckBehaviours = new Dictionary<uint, CustomTuioBehaviour>();
         
         // Keep track of the most recently placed puck with a state
         private uint _mostRecentPuckId;
@@ -99,7 +99,7 @@ namespace TangibleTable.Pucks
             }
         }
         
-        private PuckState GetPuckState(CustomTuio11Behaviour behaviour)
+        private PuckState GetPuckState(CustomTuioBehaviour behaviour)
         {
             foreach (var kvp in _activePucks)
             {
@@ -128,7 +128,7 @@ namespace TangibleTable.Pucks
         /// </summary>
         private void UpdateSinglePuck(uint sessionId)
         {
-            if (_activePuckBehaviours.TryGetValue(sessionId, out CustomTuio11Behaviour behaviour) && 
+            if (_activePuckBehaviours.TryGetValue(sessionId, out CustomTuioBehaviour behaviour) && 
                 _activePucks.TryGetValue(sessionId, out PuckState state) && 
                 state != null)
             {
@@ -181,7 +181,7 @@ namespace TangibleTable.Pucks
         /// <summary>
         /// Called when a TUIO object is added to the table
         /// </summary>
-        public void OnPuckAdded(uint sessionId, int symbolId, CustomTuio11Behaviour behaviour)
+        public void OnPuckAdded(uint sessionId, int symbolId, CustomTuioBehaviour behaviour)
         {
             if (!_initialized)
                 InitializePuckStates();
@@ -334,7 +334,7 @@ namespace TangibleTable.Pucks
         /// <summary>
         /// Set the color of a puck's visual representation
         /// </summary>
-        private void SetPuckColor(CustomTuio11Behaviour behaviour, Color color)
+        private void SetPuckColor(CustomTuioBehaviour behaviour, Color color)
         {
             if (behaviour == null) return;
             
@@ -356,7 +356,7 @@ namespace TangibleTable.Pucks
         /// <summary>
         /// Configure debug settings for a TUIO object
         /// </summary>
-        private void ConfigurePuckDebug(CustomTuio11Behaviour behaviour, PuckState state, bool showDebug)
+        private void ConfigurePuckDebug(CustomTuioBehaviour behaviour, PuckState state, bool showDebug)
         {
             if (behaviour == null) return;
             

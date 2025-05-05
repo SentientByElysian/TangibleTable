@@ -13,7 +13,7 @@ namespace TangibleTable
     /// Custom behavior for TUIO 1.1 objects that uses our dual-display coordinate transformation.
     /// Can also be used for single display mode.
     /// </summary>
-    public class CustomTuio11Behaviour : MonoBehaviour
+    public class CustomTuioBehaviour : MonoBehaviour
     {
         private RectTransform _rectTransform;
         

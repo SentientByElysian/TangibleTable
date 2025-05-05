@@ -1,4 +1,4 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,6 +7,8 @@ namespace UTool.TabSystem
 {
     public class TabContent : MonoBehaviour
     {
+        public static event Action SettingsApplied;
+        
         [SerializeField] private Transform contentHolder;
         [SerializeField] private TextMeshProUGUI nameDisplay;
         [SpaceArea]
@@ -54,6 +56,7 @@ namespace UTool.TabSystem
         public void ApplyChanges()
         {
             tab.ApplyTabVariables();
+            SettingsApplied?.Invoke();
         }
     }
 }

@@ -16,7 +16,7 @@ namespace UTool
         public static readonly string devProjectName = "UUtility";
         public static string projectName = "EmptyProjectName";
 
-        public static string environmentDataPath => $@"{System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments)}\Purpleglo\Software\{(isUUtilityProject ? devProjectName : projectName)}";
+        public static string environmentDataPath => $@"{System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments)}\Sentient\Software\{(isUUtilityProject ? devProjectName : projectName)}";
         public static string dataPath => isAndroidPlatform ? $@"{Application.persistentDataPath}\{projectName}" : environmentDataPath;
         public static string configDataPath => $@"{dataPath}\ConfigData";
 

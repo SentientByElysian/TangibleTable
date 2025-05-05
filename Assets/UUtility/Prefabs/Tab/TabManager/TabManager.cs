@@ -36,6 +36,7 @@ namespace UTool.TabSystem
 
         private bool setupDone = false;
         private Dictionary<string, Tab> instanceTabs = new Dictionary<string, Tab>();
+        private Dictionary<string, List<string>> tabNameInstances = new Dictionary<string, List<string>>();
 
         public void EarlyAwake()
         {
@@ -75,6 +76,7 @@ namespace UTool.TabSystem
             }
 
             instanceTabs.Clear();
+            tabNameInstances.Clear();
             tabButtonHolder.DestroyAllChildImmediate();
             tabContentHolder.DestroyAllChildImmediate();
 
@@ -112,6 +114,7 @@ namespace UTool.TabSystem
 
         private void RefreshFeildAttributes()
         {
+            tabNameInstances.Clear();
             List<HasTabFieldAttribute> hasTabFieldAttributes = GetNewTabFieldClassAttributes();
             BindAttributes(hasTabFieldAttributes);
         }
@@ -151,6 +154,25 @@ namespace UTool.TabSystem
 
         private void BindAttributes(List<HasTabFieldAttribute> hasTabFieldAttributes)
         {
+            // First pass: collect class instances
+            foreach (HasTabFieldAttribute hasTabFieldAtt in hasTabFieldAttributes)
+            {
+                object parent = hasTabFieldAtt.parent;
+                Type parentType = hasTabFieldAtt.parentType;
+                string tabName = parentType.ToString().Split('.').Last();
+                
+                // Track this instance for the tab name
+                Component component = parent as Component;
+                string instanceName = component != null ? component.gameObject.name : parent.GetHashCode().ToString();
+                
+                if (!tabNameInstances.ContainsKey(tabName))
+                {
+                    tabNameInstances[tabName] = new List<string>();
+                }
+                tabNameInstances[tabName].Add(instanceName);
+            }
+            
+            // Second pass: create tabs and bind attributes
             foreach (HasTabFieldAttribute hasTabFieldAtt in hasTabFieldAttributes)
             {
                 hasTabFieldAtt.active = true;
@@ -160,6 +182,10 @@ namespace UTool.TabSystem
 
                 string tabName = parentType.ToString().Split('.').Last();
                 string instanceKey = GenerateInstanceKey(parent, tabName);
+                
+                // Get the GameObject name for this instance
+                Component component = parent as Component;
+                string instanceName = component != null ? component.gameObject.name : parent.GetHashCode().ToString();
 
                 foreach (FieldInfo fieldInfo in parent.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                 {
@@ -170,7 +196,7 @@ namespace UTool.TabSystem
 
                     attr.Setup(fieldInfo, parent);
 
-                    Tab tab = GetAttributeTab(instanceKey, tabName, parent);
+                    Tab tab = GetAttributeTab(instanceKey, tabName, parent, instanceName);
                     string variableName = attr.variableName;
 
                     if (CheckForDuplicateBinding(tab, variableName))
@@ -196,7 +222,7 @@ namespace UTool.TabSystem
 
                     attr.Setup(methodInfo, parent);
 
-                    Tab tab = GetAttributeTab(instanceKey, tabName, parent);
+                    Tab tab = GetAttributeTab(instanceKey, tabName, parent, instanceName);
 
                     if (CheckForDuplicateBinding(tab, attr.variableName))
                         continue;
@@ -213,24 +239,34 @@ namespace UTool.TabSystem
             }
         }
 
-        private Tab GetAttributeTab(string instanceKey, string tabName, object instance)
+        private Tab GetAttributeTab(string instanceKey, string tabName, object instance, string instanceName)
         {
             if (instanceTabs.TryGetValue(instanceKey, out Tab tab))
                 return tab;
 
-            tab = CreateAttributeTab(tabName, instance);
+            tab = CreateAttributeTab(tabName, instance, instanceName);
             instanceTabs[instanceKey] = tab;
             tabs.Add(tab);
             return tab;
         }
 
-        private Tab CreateAttributeTab(string tabName, object instance)
+        private Tab CreateAttributeTab(string tabName, object instance, string instanceName)
         {
             Tab attTab = Instantiate(tabPrefab, transform);
             
-            Component component = instance as Component;
-            string instanceName = component != null ? component.gameObject.name : instance.GetHashCode().ToString();
-            attTab.attTabName = $"{tabName} ({instanceName})";
+            // Check if there are multiple instances of this class type
+            bool hasMultipleInstances = tabNameInstances.ContainsKey(tabName) && tabNameInstances[tabName].Count > 1;
+            
+            if (hasMultipleInstances)
+            {
+                // Multiple instances: "GameObjectName (ClassName)"
+                attTab.attTabName = $"{instanceName} ({tabName})";
+            }
+            else
+            {
+                // Single instance: just "ClassName"
+                attTab.attTabName = tabName;
+            }
             
             attTab.controlledByAttribute = true;
             attTab.usedByAttribute = true;
@@ -265,13 +301,28 @@ namespace UTool.TabSystem
             activeTab = tab;
         }
 
-        public Tab GetTab(TabName tabName)
+        public Tab GetTab(object instance)
         {
-            Tab tab = tabs.Find(x => x.tabName == tabName.ToString());
-            if (!tab)
-                Debug.LogError($"Tab '{tabName}' Could Not Be Found");
-
-            return tab;
+            if (instance == null)
+            {
+                Debug.LogError("TabManager.GetTabForInstance: Instance cannot be null");
+                return null;
+            }
+    
+            // Get the type name without namespace
+            string tabName = instance.GetType().ToString().Split('.').Last();
+    
+            // Generate the instance key used in our dictionary
+            string instanceKey = GenerateInstanceKey(instance, tabName);
+    
+            // Try to find the tab for this instance
+            if (instanceTabs.TryGetValue(instanceKey, out Tab tab))
+            {
+                return tab;
+            }
+    
+            Debug.LogWarning($"TabManager: No tab found for {tabName} instance");
+            return null;
         }
 
         private TabButton CreateTabButton()

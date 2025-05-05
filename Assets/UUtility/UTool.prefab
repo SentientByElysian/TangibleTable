@@ -49,7 +49,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24acaf78028e86d47b43efeec5f093ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 1.4.5
+  version: 1.4.7
   _projectName: 
   avoidTouchState: 0
   activateMultiDisplay: 0

@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "C:\\Odera\\Github\\TangibleTable\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|c:\\odera\\github\\tangibletable\\assets\\scripts\\tangibletable\\customtuio11visualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\tangibletable\\customtuio11visualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|c:\\odera\\github\\tangibletable\\assets\\scripts\\tangibletable\\shared\\tuiomanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\tangibletable\\shared\\tuiomanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|c:\\odera\\github\\tangibletable\\library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\utils\\tuiodebug.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|C:\\Odera\\Github\\TangibleTable\\library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\utils\\tuiodebug.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|solutionrelative:library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\utils\\tuiodebug.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|c:\\odera\\github\\tangibletable\\assets\\scripts\\tangibletable\\tuiodebugmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8D472901-D884-E6BC-B737-2566E553A009}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\tangibletable\\tuiodebugmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|C:\\Odera\\Github\\TangibleTable\\library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\tuio11\\tuio11visualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -29,6 +29,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|C:\\Odera\\Github\\TangibleTable\\library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\common\\tuiotransform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{AA72FCC2-9C56-5187-1469-FE5F64CBBEE6}|InteractiveScape.Tuio.csproj|solutionrelative:library\\packagecache\\com.interactive-scape.tuio_client@2f8a4bd687\\runtime\\common\\tuiotransform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\TuioDebugManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\TangibleTable\\TuioDebugManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,11 +42,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "TuioManager.cs",
+              "DocumentMoniker": "C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\Shared\\TuioManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\TangibleTable\\Shared\\TuioManager.cs",
+              "ToolTip": "C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\Shared\\TuioManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\TangibleTable\\Shared\\TuioManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-02T11:06:50.095Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "TuioDebug.cs",
               "DocumentMoniker": "C:\\Odera\\Github\\TangibleTable\\Library\\PackageCache\\com.interactive-scape.tuio_client@2f8a4bd687\\Runtime\\Utils\\TuioDebug.cs",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.interactive-scape.tuio_client@2f8a4bd687\\Runtime\\Utils\\TuioDebug.cs",
@@ -50,25 +67,22 @@
               "RelativeToolTip": "Library\\PackageCache\\com.interactive-scape.tuio_client@2f8a4bd687\\Runtime\\Utils\\TuioDebug.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-08T13:13:43.651Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-08T13:13:43.651Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "CustomTuio11Visualizer.cs",
               "DocumentMoniker": "C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs",
               "ToolTip": "C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs",
               "RelativeToolTip": "Assets\\Scripts\\TangibleTable\\CustomTuio11Visualizer.cs",
-              "ViewState": "AgIAADsAAAAAAAAAAAAowEwAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-08T13:13:14.709Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-08T13:13:14.709Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 7,
               "Title": "TuioDebugManager.cs",
               "DocumentMoniker": "C:\\Odera\\Github\\TangibleTable\\Assets\\Scripts\\TangibleTable\\TuioDebugManager.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\TangibleTable\\TuioDebugManager.cs",
@@ -76,8 +90,7 @@
               "RelativeToolTip": "Assets\\Scripts\\TangibleTable\\TuioDebugManager.cs",
               "ViewState": "AgIAAAwAAAAAAAAAAAAAAB8AAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-08T13:07:20.873Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-08T13:07:20.873Z"
             },
             {
               "$type": "Document",

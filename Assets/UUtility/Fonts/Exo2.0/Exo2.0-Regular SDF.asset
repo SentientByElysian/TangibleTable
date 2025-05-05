@@ -1048,21 +1048,6 @@ MonoBehaviour:
     m_Scale: 1
     m_AtlasIndex: 0
     m_ClassDefinitionType: 0
-  - m_Index: 393
-    m_Metrics:
-      m_Width: 27.453125
-      m_Height: 5.859375
-      m_HorizontalBearingX: 6.484375
-      m_HorizontalBearingY: 25.65625
-      m_HorizontalAdvance: 40.40625
-    m_GlyphRect:
-      m_X: 138
-      m_Y: 175
-      m_Width: 28
-      m_Height: 7
-    m_Scale: 1
-    m_AtlasIndex: 0
-    m_ClassDefinitionType: 0
   - m_Index: 161
     m_Metrics:
       m_Width: 12.953125
@@ -1075,6 +1060,21 @@ MonoBehaviour:
       m_Y: 776
       m_Width: 14
       m_Height: 82
+    m_Scale: 1
+    m_AtlasIndex: 0
+    m_ClassDefinitionType: 0
+  - m_Index: 393
+    m_Metrics:
+      m_Width: 27.453125
+      m_Height: 5.859375
+      m_HorizontalBearingX: 6.484375
+      m_HorizontalBearingY: 25.65625
+      m_HorizontalAdvance: 40.40625
+    m_GlyphRect:
+      m_X: 138
+      m_Y: 175
+      m_Width: 28
+      m_Height: 7
     m_Scale: 1
     m_AtlasIndex: 0
     m_ClassDefinitionType: 0
@@ -1363,12 +1363,12 @@ MonoBehaviour:
     m_GlyphIndex: 372
     m_Scale: 1
   - m_ElementType: 1
-    m_Unicode: 45
-    m_GlyphIndex: 393
-    m_Scale: 1
-  - m_ElementType: 1
     m_Unicode: 106
     m_GlyphIndex: 161
+    m_Scale: 1
+  - m_ElementType: 1
+    m_Unicode: 45
+    m_GlyphIndex: 393
     m_Scale: 1
   - m_ElementType: 1
     m_Unicode: 113
@@ -1644,14 +1644,14 @@ MonoBehaviour:
     m_Y: 683
     m_Width: 41
     m_Height: 83
-  - m_X: 128
-    m_Y: 165
-    m_Width: 47
-    m_Height: 26
   - m_X: 276
     m_Y: 766
     m_Width: 33
     m_Height: 101
+  - m_X: 128
+    m_Y: 165
+    m_Width: 47
+    m_Height: 26
   - m_X: 279
     m_Y: 867
     m_Width: 60
@@ -1841,6 +1841,14 @@ MonoBehaviour:
     m_Y: 765
     m_Width: 57
     m_Height: 18
+  - m_X: 308
+    m_Y: 514
+    m_Width: 715
+    m_Height: 252
+  - m_X: 210
+    m_Y: 766
+    m_Width: 66
+    m_Height: 17
   - m_X: 128
     m_Y: 164
     m_Width: 44
@@ -1853,14 +1861,6 @@ MonoBehaviour:
     m_Y: 165
     m_Width: 76
     m_Height: 26
-  - m_X: 308
-    m_Y: 514
-    m_Width: 715
-    m_Height: 252
-  - m_X: 210
-    m_Y: 766
-    m_Width: 66
-    m_Height: 17
   - m_X: 319
     m_Y: 417
     m_Width: 704
