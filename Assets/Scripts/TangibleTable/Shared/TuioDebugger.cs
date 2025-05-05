@@ -11,11 +11,8 @@ namespace TangibleTable.Shared
     /// Attach to any object in the scene to monitor TUIO markers.
     /// </summary>
     [HasTabField]
-    public class TuioDebugger : Singleton<TuioDebugger> 
+    public class TuioDebugger : Singleton<TuioDebugger>
     {
-        // Singleton instance
-        public static TuioDebugger Instance { get; private set; }
-
         public Canvas DebugCanvas => _canvas;
 
         // Panel alignment options
@@ -58,27 +55,24 @@ namespace TangibleTable.Shared
         public bool ShowUIPanel
         {
             get { return _displayDebug; }
-            set
-            {
-                _displayDebug = value;                    
-            }
+            set { _displayDebug = value; }
         }
 
         // Debug data storage
-        private List<CustomTuioBehaviour> _trackedObjects = new List<CustomTuioBehaviour>();
-        private Dictionary<int, List<float>> _rotationHistory = new Dictionary<int, List<float>>();
-        private Dictionary<int, Vector2> _positionHistory = new Dictionary<int, Vector2>();
-        private Dictionary<int, float> _maxRotationDelta = new Dictionary<int, float>();
-        private Dictionary<int, float> _avgRotationDelta = new Dictionary<int, float>();
-        private Dictionary<int, int> _jitterCount = new Dictionary<int, int>();
+        private List<CustomTuioBehaviour>    _trackedObjects   = new List<CustomTuioBehaviour>();
+        private Dictionary<int, List<float>> _rotationHistory  = new Dictionary<int, List<float>>();
+        private Dictionary<int, Vector2>     _positionHistory  = new Dictionary<int, Vector2>();
+        private Dictionary<int, float>       _maxRotationDelta = new Dictionary<int, float>();
+        private Dictionary<int, float>       _avgRotationDelta = new Dictionary<int, float>();
+        private Dictionary<int, int>         _jitterCount      = new Dictionary<int, int>();
 
         private float _updateInterval = 0.5f;
-        private float _timer = 0f;
+        private float _timer          = 0f;
 
-        private GameObject _canvasObj;
-        private RectTransform _panelRT;
+        private GameObject      _canvasObj;
+        private RectTransform   _panelRT;
         private TextMeshProUGUI _debugText;
-        private Canvas _canvas;
+        private Canvas          _canvas;
 
         public override void Awake()
         {
@@ -87,27 +81,25 @@ namespace TangibleTable.Shared
             TabContent.SettingsApplied += OnDebugSettingsApplied;
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
+            base.OnDestroy();
             TabContent.SettingsApplied -= OnDebugSettingsApplied;
         }
 
         private void OnDebugSettingsApplied()
-{
-    if (_canvasObj != null)
-                    {
-                        _canvasObj.SetActive(_displayDebug);
-                        // Make sure the text is visible
-                        if (_debugText != null && _trackedObjects.Count == 0 && _displayDebug)
-                        {
-                            _debugText.text = "Waiting for TUIO objects...";
-                        }
-                    }
-}
+        {
+            if (_canvasObj != null)
+            {
+                _canvasObj.SetActive(_displayDebug);
+                // Make sure the text is visible
+                if (_debugText != null && _trackedObjects.Count == 0 && _displayDebug)
+                {
+                    _debugText.text = "Waiting for TUIO objects...";
+                }
+            }
+        }
+
         /// <summary>
         /// Set the panel alignment (left or right side of screen)
         /// </summary>
@@ -301,8 +293,10 @@ namespace TangibleTable.Shared
                             float sum = 0f;
                             for (int i = 1; i < _rotationHistory[id].Count; i++)
                             {
-                                sum += Mathf.Abs(Mathf.DeltaAngle(_rotationHistory[id][i], _rotationHistory[id][i - 1]));
+                                sum += Mathf.Abs(Mathf.DeltaAngle(_rotationHistory[id][i],
+                                    _rotationHistory[id][i - 1]));
                             }
+
                             _avgRotationDelta[id] = sum / (_rotationHistory[id].Count - 1);
 
                             // Detect jitter (small oscillations)
@@ -341,13 +335,16 @@ namespace TangibleTable.Shared
                     text += $"Jitter Events: {_jitterCount[id]}\n";
 
                     // Get stability settings directly from the object
-                    var field = obj.GetType().GetField("_useRotationStabilizer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var field = obj.GetType().GetField("_useRotationStabilizer",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     bool useStabilizer = field != null ? (bool)field.GetValue(obj) : false;
 
-                    var thresholdField = obj.GetType().GetField("_rotationStabilityThreshold", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var thresholdField = obj.GetType().GetField("_rotationStabilityThreshold",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     float threshold = thresholdField != null ? (float)thresholdField.GetValue(obj) : 0f;
 
-                    var framesField = obj.GetType().GetField("_stableFramesRequired", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var framesField = obj.GetType().GetField("_stableFramesRequired",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     int frames = framesField != null ? (int)framesField.GetValue(obj) : 0;
 
                     text += $"<color=cyan>Stabilizer: {(useStabilizer ? "ON" : "OFF")}</color>\n";

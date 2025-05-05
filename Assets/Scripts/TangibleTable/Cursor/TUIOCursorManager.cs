@@ -1,14 +1,10 @@
 using System;
 using System.Collections.Generic;
-using TangibleTable.Pucks;
 using TangibleTable.Shared;
 using TuioNet.Tuio11;
 using TuioUnity.Common;
-using TuioUnity.Tuio11;
-using TuioUnity.Utils;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.EventSystems;
 
 namespace TangibleTable.SingleDisplay
 {
@@ -67,20 +63,18 @@ namespace TangibleTable.SingleDisplay
         
         private void AddTuioCursor(object sender, Tuio11Cursor tuioCursor)
         {
-             CustomTuioBehaviour cursorObj = null;
-            
             // Create a cursor visual if prefab is assigned (optional)
             if (_cursorPrefab != null)
             {
                 // Instantiate the cursor object
-                cursorObj = Instantiate(_cursorPrefab, TuioDebugger.Instance?.DebugCanvas.transform);
-                
+                var cursorBehaviour = Instantiate(_cursorPrefab, TuioDebugger.Instance.DebugCanvas.transform);
+                cursorBehaviour.Initialize(tuioCursor);
                 
                 // Store in dictionary
-                _tuioCursors[tuioCursor.SessionId] = cursorObj;
+                _tuioCursors[tuioCursor.SessionId] = cursorBehaviour;
                 
                 // Fire the cursor created event
-                OnCursorCreated?.Invoke(cursorObj);
+                OnCursorCreated?.Invoke(cursorBehaviour);
             }
             
             // Get cursor position and transform to screen space

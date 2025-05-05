@@ -12,13 +12,13 @@ namespace TangibleTable.Shared
     [RequireComponent(typeof(CustomTuioBehaviour))]
     public class TuioDebug : MonoBehaviour
     {
-        [SerializeField] private TMP_Text _debugText;
-        [SerializeField] private MaskableGraphic _background;
+        public Color tuioColor = Color.white;
+        
+        [SerializeField] private TMP_Text        debugText;
+        [SerializeField] private MaskableGraphic background;
+        [SerializeField] private bool            isCursor = false;
 
         private CustomTuioBehaviour _customBehaviour;
-
-        public Color tuioColor = Color.white;
-        [SerializeField] private bool _isCursor = false;
         private bool _wasVisible = true;
         private bool _startComplete = false;
 
@@ -26,24 +26,12 @@ namespace TangibleTable.Shared
         {
             _customBehaviour = GetComponent<CustomTuioBehaviour>();
             
-            // // Check if this is a cursor
-            // if (_customBehaviour != null)
-            // {
-            //     // Use reflection to get the _isCursor field
-            //     var isCursorField = _customBehaviour.GetType().GetField("_isCursor", 
-            //         System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            //     if (isCursorField != null)
-            //     {
-            //         _isCursor = (bool)isCursorField.GetValue(_customBehaviour);
-            //     }
-            // }
-            
             // Set initial color
-            if (_background != null)
-                _background.color = tuioColor;
+            if (background != null)
+                background.color = tuioColor;
                 
-            if (_debugText != null)
-                _debugText.color = tuioColor;
+            if (debugText != null)
+                debugText.color = tuioColor;
             
             // Check if we should be visible based on settings
             UpdateVisibility();
@@ -53,9 +41,9 @@ namespace TangibleTable.Shared
         private void Update()
         {
             // Update debug text
-            if (_customBehaviour != null && _debugText != null)
+            if (_customBehaviour != null && debugText != null)
             {
-                _debugText.text = _customBehaviour.DebugText();
+                debugText.text = _customBehaviour.DebugText();
             }
             
             // Check visibility based on settings
@@ -67,7 +55,7 @@ namespace TangibleTable.Shared
             bool shouldBeVisible = true;
             
             // For cursors, check cursor visibility setting
-            if (_isCursor)
+            if (isCursor)
             {
                 // Check if cursor visuals should be hidden based on TuioManager
                 shouldBeVisible = IsCursorVisualEnabled();
@@ -113,20 +101,20 @@ namespace TangibleTable.Shared
         private void SetVisibility(bool visible)
         {
             // Hide/show debug components
-            if (_debugText != null)
-                _debugText.enabled = visible;
+            if (debugText != null)
+                debugText.enabled = visible;
                 
-            if (_background != null)
-                _background.enabled = visible;
+            if (background != null)
+                background.enabled = visible;
             
             // For CURSOR-type TUIO objects only - hide the cursor visuals completely
-            if (_isCursor && !visible)
+            if (isCursor && !visible)
             {
                 HideAllRenderers();
             }
             
             // Special case: If we're a regular object (not cursor), we only hide debug text, not the object itself
-            if (!_isCursor)
+            if (!isCursor)
             {
                 // Ensure object's renderers stay visible even when debug text is hidden
                 foreach (var renderer in GetComponentsInChildren<Renderer>())
@@ -136,7 +124,7 @@ namespace TangibleTable.Shared
                 
                 foreach (var image in GetComponentsInChildren<Image>(true))
                 {
-                    if (image != _background)
+                    if (image != background)
                         image.enabled = true;  // Keep object visuals visible
                 }
             }
@@ -154,7 +142,7 @@ namespace TangibleTable.Shared
             // Hide UI graphics (except our debug components already handled)
             foreach (var graphic in GetComponentsInChildren<Graphic>(true))
             {
-                if (graphic != _debugText && graphic != _background)
+                if (graphic != debugText && graphic != background)
                     graphic.enabled = false;
             }
             
