@@ -346,7 +346,7 @@ namespace TangibleTable.Pucks
             }
             
             // Check if it has a TuioDebug component and set its color
-            var debug = behaviour.GetComponentsInChildren<TuioUnity.Utils.TuioDebug>();
+            var debug = behaviour.GetComponentsInChildren<TuioDebug>();
             foreach (var debugComponent in debug)
             {
                 debugComponent.tuioColor = color;
