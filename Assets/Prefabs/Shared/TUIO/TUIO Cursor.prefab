@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1497715667469732288}
   - component: {fileID: 8047263239241763770}
   - component: {fileID: 8550277587949775670}
+  - component: {fileID: 6086034763508533206}
   m_Layer: 5
   m_Name: Background
   m_TagString: Untagged
@@ -76,6 +77,19 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6086034763508533206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1158607381098155766}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb0b0b780b382f47963cc5d57c163b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugText: {fileID: 0}
 --- !u!1 &5807901433672182402
 GameObject:
   m_ObjectHideFlags: 0
@@ -86,7 +100,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3028895229515383147}
   - component: {fileID: 5561380714214481044}
-  - component: {fileID: 3534404375640410096}
+  - component: {fileID: 6950400886587099310}
   m_Layer: 5
   m_Name: TUIO Cursor
   m_TagString: Untagged
@@ -127,8 +141,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showDebugInfo: 0
-  _createDebugComponent: 0
---- !u!114 &3534404375640410096
+  _createDebugComponent: 1
+  _trackDeltaRotation: 1
+  _resetReferenceOnNewSession: 1
+  OnDeltaRotationChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &6950400886587099310
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -137,11 +156,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 5807901433672182402}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37dbcee5fa223d541aa8b35338f8e777, type: 3}
+  m_Script: {fileID: 11500000, guid: cc88c1088a6f36b4ab21eba49762bc35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugPanel: {fileID: 1158607381098155766}
-  debugText: {fileID: 6796155174607475703}
+  _mode: 1
+  _rotationStabilityThreshold: 2.5
+  _rotationSmoothSpeed: 0.15
+  _positionSmoothSpeed: 0.25
+  _adaptiveSpeedMinFactor: 0.2
+  _adaptiveSpeedMaxFactor: 3
 --- !u!1001 &2101038159543430772
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -276,15 +299,3 @@ RectTransform:
     type: 3}
   m_PrefabInstance: {fileID: 2101038159543430772}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6796155174607475703 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4861820570121616771, guid: 86b36bd952f48504b82779b8133bb3be,
-    type: 3}
-  m_PrefabInstance: {fileID: 2101038159543430772}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 

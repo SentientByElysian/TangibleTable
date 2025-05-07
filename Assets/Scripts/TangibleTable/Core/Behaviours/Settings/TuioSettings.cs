@@ -1,7 +1,8 @@
 using UnityEngine;
 using UTool.TabSystem;
+using TangibleTable.Core.Behaviours.Visualization;
 
-namespace TangibleTable.Core.Behaviours
+namespace TangibleTable.Core.Behaviours.Settings
 {
     /// <summary>
     /// Settings for TUIO stabilization, smoothing, and offsets.
@@ -26,14 +27,14 @@ namespace TangibleTable.Core.Behaviours
         
         #region Object-Specific Settings (Physical Markers)
         
-        [Header("Object Rotation Stabilization")]
+        [Header("Rotation Stabilization")]
         [TabField]
         [Tooltip("Minimum angle change in degrees required to update rotation")]
-        [SerializeField, Range(0.1f, 10f)] private float _objectRotationThreshold = 2.5f;
+        [SerializeField, Range(0.1f, 10f)] private float _rotationThreshold = 2.5f;
         
         [TabField]
         [Tooltip("Speed of rotation interpolation (lower = smoother but slower)")]
-        [SerializeField, Range(0.01f, 1f)] private float _objectRotationSmoothSpeed = 0.15f;
+        [SerializeField, Range(0.0f, 1f)] private float _rotationSmoothSpeed = 0.15f;
         
         #endregion
         
@@ -73,8 +74,8 @@ namespace TangibleTable.Core.Behaviours
             if (visualizer == null) return;
             
             visualizer.ConfigureStabilizer(
-                _objectRotationThreshold,
-                _objectRotationSmoothSpeed,
+                _rotationThreshold,
+                _rotationSmoothSpeed,
                 _positionSmoothSpeed
             );
             

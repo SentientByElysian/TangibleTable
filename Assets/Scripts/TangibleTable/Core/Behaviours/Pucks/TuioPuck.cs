@@ -1,8 +1,8 @@
 using UnityEngine;
 using TuioNet.Tuio11;
-using TangibleTable.Core.Behaviours;
+using TangibleTable.Core.Behaviours.Visualization;
 
-namespace TangibleTable.Core.Behaviours
+namespace TangibleTable.Core.Behaviours.Pucks
 {
     /// <summary>
     /// Base class for TUIO pucks (physical objects tracked by the TUIO system)

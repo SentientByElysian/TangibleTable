@@ -5,8 +5,9 @@ using UnityEngine.UI;
 using UTool.TabSystem;
 using TJ.Utils;
 using TangibleTable.Core.Behaviours;
+using TangibleTable.Core.Behaviours.Visualization;
 
-namespace TangibleTable.Core.Debug
+namespace TangibleTable.Core.Debugging
 {
     /// <summary>
     /// Debug component to monitor TUIO input values and diagnose jitter issues.
@@ -42,7 +43,7 @@ namespace TangibleTable.Core.Debug
 
         [Header("UI Display")]
         [TabField]
-        [SerializeField] private bool _displayDebug = true;
+        public bool _displayDebug = true;
 
         [SerializeField] private PanelAlignment _panelAlignment = PanelAlignment.Right;
 
@@ -55,16 +56,6 @@ namespace TangibleTable.Core.Debug
 
         [TabField]
         [SerializeField] private int _dataPointsToCollect = 100;
-
-        // Public property to access _displayDebug from other classes
-        public bool ShowUIPanel
-        {
-            get { return _displayDebug; }
-            set { 
-                _displayDebug = value; 
-                OnDebugSettingsApplied();
-            }
-        }
 
         // Debug data storage
         private List<TuioVisualizer> _trackedObjects = new List<TuioVisualizer>();
@@ -97,10 +88,13 @@ namespace TangibleTable.Core.Debug
 
         private void OnDebugSettingsApplied()
         {
+            Debug.Log($"[GlobalTuioDebugger] Debug settings applied, _displayDebug: {_displayDebug}");
+            
             // Update canvas visibility
             if (_canvasObj != null)
             {
                 _canvasObj.SetActive(_displayDebug);
+                Debug.Log($"[GlobalTuioDebugger] Canvas active state set to: {_canvasObj.activeSelf}");
                 
                 // Make sure the text is visible
                 if (_debugText != null && _trackedObjects.Count == 0 && _displayDebug)
@@ -244,11 +238,23 @@ namespace TangibleTable.Core.Debug
             textRT.offsetMin = new Vector2(10, 10);
             textRT.offsetMax = new Vector2(-10, -10);
 
-            _canvasObj.SetActive(_displayDebug);
+            // Ensure the debug UI is in the correct state initially
+            if (_canvasObj != null)
+            {
+                _canvasObj.SetActive(_displayDebug);
+                Debug.Log($"[GlobalTuioDebugger] Initial debug panel state: {_displayDebug}, _canvasObj active: {_canvasObj.activeSelf}");
+            }
         }
 
         private void Update()
         {
+            // Make sure canvas visibility matches _displayDebug every frame
+            if (_canvasObj != null && _canvasObj.activeSelf != _displayDebug)
+            {
+                _canvasObj.SetActive(_displayDebug);
+                Debug.LogWarning($"[GlobalTuioDebugger] Fixed debug panel visibility. Was: {!_displayDebug}, should be: {_displayDebug}");
+            }
+            
             _timer += Time.deltaTime;
 
             if (_timer >= _updateInterval)
@@ -357,6 +363,14 @@ namespace TangibleTable.Core.Debug
             }
         }
 
+        private string GetDeltaRotationInfo(TuioVisualizer visualizer)
+        {
+            if (visualizer == null) return "";
+            
+            float deltaAngle = visualizer.GetDeltaRotation();
+            return $"Delta Rotation: {deltaAngle:F0}° (0-360°)\n";
+        }
+
         private void UpdateDebugText()
         {
             if (_trackedObjects.Count == 0)
@@ -378,11 +392,16 @@ namespace TangibleTable.Core.Debug
                 if (_markerIdToMonitor != -1 && symbolId != _markerIdToMonitor)
                     continue;
 
-                text += $"<color=yellow>TUIO {(obj.IsCursor ? "Cursor" : "Object")} ID: {symbolId}</color>\n";
+                // Use different colors for cursors and objects
+                string titleColor = obj.IsCursor ? "#00CCFF" : "#FFAA00"; // Blue for cursors, Orange for objects
+                text += $"<color={titleColor}>TUIO {(obj.IsCursor ? "Cursor" : "Object")} ID: {symbolId}</color>\n";
 
                 if (_monitorRotation)
                 {
                     text += $"Rotation: {obj.transform.eulerAngles.z:F2}°\n";
+                    
+                    // Add delta rotation information
+                    text += GetDeltaRotationInfo(obj);
                     
                     if (_rotationHistory.ContainsKey(symbolId))
                     {
@@ -395,7 +414,7 @@ namespace TangibleTable.Core.Debug
                     var stabilizer = obj.GetComponent<TuioStabilizer>();
                     if (stabilizer != null)
                     {
-                        text += $"<color=cyan>Stabilizer: {(stabilizer.enabled ? "ON" : "OFF")}</color>\n";
+                        text += $"Stabilizer: {(stabilizer.enabled ? "ON" : "OFF")}\n";
                     }
                 }
 

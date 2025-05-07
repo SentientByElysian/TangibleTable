@@ -2,9 +2,10 @@ using TMPro;
 using TuioNet.Tuio11;
 using UnityEngine;
 using UnityEngine.UI;
-using TangibleTable.Core.Debug;
+using TangibleTable.Core.Debugging;
+using UnityEngine.Events;
 
-namespace TangibleTable.Core.Behaviours
+namespace TangibleTable.Core.Behaviours.Visualization
 {
     /// <summary>
     /// Visualizes and manages TUIO elements (objects and cursors) by handling their visual representation.
@@ -15,6 +16,11 @@ namespace TangibleTable.Core.Behaviours
         [SerializeField] private bool _showDebugInfo = false;
         [SerializeField] private bool _createDebugComponent = false;
         
+        [Header("Delta Rotation")]
+        [SerializeField] private bool _trackDeltaRotation = true;
+        [Tooltip("Set to true to reset the reference angle when the puck is lifted and placed again")]
+        [SerializeField] private bool _resetReferenceOnNewSession = true;
+        
         private RectTransform _rectTransform;
         
         // TUIO object data
@@ -24,6 +30,12 @@ namespace TangibleTable.Core.Behaviours
         // Position and rotation data
         private Vector2 _tuioPosition = Vector2.zero;
         protected float _angle = 0f;
+        
+        // Delta rotation tracking
+        private float _referenceAngle = 0f;
+        private float _deltaAngle = 0f;
+        private float _lastDeltaAngle = 0f;
+        private bool _referenceAngleInitialized = false;
         
         // Offset data
         private Vector2 _positionOffset = Vector2.zero;
@@ -42,6 +54,9 @@ namespace TangibleTable.Core.Behaviours
         private Vector2 _rawTuioPosition = Vector2.zero;
         private float _rawAngle = 0f;
         
+        // Events
+        public UnityEvent<float> OnDeltaRotationChanged = new UnityEvent<float>();
+        
         private void Awake()
         {
             if (_createDebugComponent)
@@ -49,17 +64,54 @@ namespace TangibleTable.Core.Behaviours
                 _debugComponent = GetComponentInChildren<TuioDebug>();
                 if (_debugComponent == null)
                 {
+                    // Create a child GameObject for the debug component
                     GameObject debugObj = new("TuioDebug");
                     debugObj.transform.SetParent(transform);
                     debugObj.transform.localPosition = Vector3.zero;
+                    
+                    // Add TuioDebug component
                     _debugComponent = debugObj.AddComponent<TuioDebug>();
+                    
+                    // Add necessary UI components
+                    RectTransform rectTransform = debugObj.AddComponent<RectTransform>();
+                    rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+                    rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                    rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                    rectTransform.sizeDelta = new Vector2(200, 100);
+                    
+                    // Create background
+                    GameObject background = new("Background");
+                    background.transform.SetParent(debugObj.transform, false);
+                    RectTransform bgRect = background.AddComponent<RectTransform>();
+                    bgRect.anchorMin = Vector2.zero;
+                    bgRect.anchorMax = Vector2.one;
+                    bgRect.sizeDelta = Vector2.zero;
+                    UnityEngine.UI.Image bgImage = background.AddComponent<UnityEngine.UI.Image>();
+                    bgImage.color = new Color(0, 0, 0, 0.7f);
+                    
+                    // Create text
+                    GameObject textObj = new("DebugText");
+                    textObj.transform.SetParent(debugObj.transform, false);
+                    RectTransform textRect = textObj.AddComponent<RectTransform>();
+                    textRect.anchorMin = Vector2.zero;
+                    textRect.anchorMax = Vector2.one;
+                    textRect.offsetMin = new Vector2(5, 5);
+                    textRect.offsetMax = new Vector2(-5, -5);
+                    TMPro.TextMeshProUGUI tmpText = textObj.AddComponent<TMPro.TextMeshProUGUI>();
+                    tmpText.fontSize = 12;
+                    tmpText.color = Color.white;
+                    tmpText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+                    
+                    // Initialize visibility based on the global debug setting
+                    bool globalDebug = GlobalTuioDebugger.Instance?._displayDebug ?? false;
+                    _debugComponent.UpdateVisibility(globalDebug || _showDebugInfo);
                 }
             }
             
             // Initialize stabilizer if needed
             _stabilizer = GetComponent<TuioStabilizer>();
             if (_stabilizer == null)
-            {
+                {
                 _stabilizer = gameObject.AddComponent<TuioStabilizer>();
             }
             
@@ -85,7 +137,7 @@ namespace TangibleTable.Core.Behaviours
         /// Try to unregister from GlobalTuioDebugger if it exists
         /// </summary>
         private void UnregisterFromGlobalDebugger()
-        {
+                {
             GlobalTuioDebugger.Instance?.RemoveTrackedObject(this);
         }
         
@@ -96,6 +148,7 @@ namespace TangibleTable.Core.Behaviours
         {
             EnsureRectTransform();
             
+            uint previousSessionId = _sessionId;
             _sessionId = obj.SessionId;
             _symbolId = (int)obj.SymbolId;
             _isCursor = false;
@@ -112,6 +165,12 @@ namespace TangibleTable.Core.Behaviours
             
             // Process raw data into stabilized values
             ProcessRawTuioData();
+            
+            // Reset reference angle if needed (when a new puck is placed)
+            if (_trackDeltaRotation && (_resetReferenceOnNewSession && previousSessionId != _sessionId || !_referenceAngleInitialized))
+            {
+                SetReferenceAngle(_angle);
+            }
             
             // Update component visuals
             UpdateVisual();
@@ -165,11 +224,78 @@ namespace TangibleTable.Core.Behaviours
             {
                 // Process angle through stabilizer
                 _angle = _stabilizer.StabilizeRotation(_rawAngle);
+                
+                // Calculate delta rotation if enabled
+                if (_trackDeltaRotation && _referenceAngleInitialized)
+                {
+                    // Calculate the delta rotation (reversed direction)
+                    float rawDelta = -Mathf.DeltaAngle(_referenceAngle, _angle);
+                    
+                    // Convert to 0-360 range
+                    _deltaAngle = (rawDelta + 360f) % 360f;
+                    
+                    // Only trigger the event if the delta angle has actually changed
+                    if (Mathf.Abs(_deltaAngle - _lastDeltaAngle) > 0.1f)
+                    {
+                        _lastDeltaAngle = _deltaAngle;
+                        OnDeltaRotationChanged.Invoke(_deltaAngle);
+                    }
+                }
             }
             else
             {
                 _angle = _rawAngle;
             }
+        }
+        
+        /// <summary>
+        /// Sets the current angle as the reference angle (0°) for delta rotation calculations
+        /// </summary>
+        public void SetReferenceAngle(float referenceAngle)
+        {
+            _referenceAngle = referenceAngle;
+            _deltaAngle = 0f;
+            _lastDeltaAngle = 0f;
+            _referenceAngleInitialized = true;
+            
+            // Trigger initial event with zero delta
+            OnDeltaRotationChanged.Invoke(0f);
+        }
+        
+        /// <summary>
+        /// Manually reset the reference angle to the current angle, making the current rotation the new "zero" reference
+        /// </summary>
+        public void ResetReferenceAngle()
+        {
+            SetReferenceAngle(_angle);
+        }
+        
+        /// <summary>
+        /// Get the current delta rotation in degrees (relative to initial reference angle)
+        /// </summary>
+        public float GetDeltaRotation()
+        {
+            if (_trackDeltaRotation && _referenceAngleInitialized)
+            {
+                return _deltaAngle;
+            }
+            return 0f;
+        }
+        
+        /// <summary>
+        /// Get the reference angle in degrees (the angle that's considered "zero" for delta calculations)
+        /// </summary>
+        public float GetReferenceAngle()
+        {
+            return _referenceAngle;
+        }
+        
+        /// <summary>
+        /// Get the absolute rotation in world space
+        /// </summary>
+        public float GetAbsoluteRotation()
+        {
+            return _angle;
         }
         
         private void EnsureRectTransform()
@@ -192,13 +318,16 @@ namespace TangibleTable.Core.Behaviours
             bool globalDebug = false;
             if (GlobalTuioDebugger.Instance != null)
             {
-                globalDebug = GlobalTuioDebugger.Instance.ShowUIPanel;
+                globalDebug = GlobalTuioDebugger.Instance._displayDebug;
             }
             
+            // Update our local debug flag if it doesn't match the global setting
             if (_showDebugInfo != globalDebug)
             {
-                SetDebugMode(globalDebug);
+                _showDebugInfo = globalDebug;
             }
+            
+            _debugComponent?.UpdateVisibility(_showDebugInfo);
         }
         
         /// <summary>
@@ -219,8 +348,8 @@ namespace TangibleTable.Core.Behaviours
             else
             {
                 // Direct update without stabilization
-                _rectTransform.position = screenPosition;
-                _rectTransform.rotation = Quaternion.Euler(0, 0, _angle);
+            _rectTransform.position = screenPosition;
+            _rectTransform.rotation = Quaternion.Euler(0, 0, _angle);
             }
             
             // Update debug info
@@ -271,15 +400,22 @@ namespace TangibleTable.Core.Behaviours
         {
             if (_debugComponent != null)
             {
+                // Get delta rotation for debug display
+                float deltaRotation = _trackDeltaRotation && _referenceAngleInitialized ?
+                    _deltaAngle : 0f;
+                
+                // Use the overload that includes delta rotation
                 _debugComponent.SetData(
                     _sessionId.ToString(),
                     _symbolId.ToString(),
                     _tuioPosition,
                     _angle,
+                    deltaRotation,
                     _puckStateName
                 );
                 
-                _debugComponent.UpdateVisibility(_showDebugInfo);
+                // Visibility is now handled by the TuioDebug component itself
+                // based on the global debug setting
             }
         }
         
@@ -311,8 +447,8 @@ namespace TangibleTable.Core.Behaviours
                 // Convert to screen space
                 float screenX = adjustedPos.x * Screen.width;
                 float screenY = (1 - adjustedPos.y) * Screen.height;
-                return new Vector3(screenX, screenY, 0);
-            }
+            return new Vector3(screenX, screenY, 0);
+        }
         }
         
         /// <summary>
@@ -344,16 +480,6 @@ namespace TangibleTable.Core.Behaviours
         {
             _puckStateName = stateName;
             UpdateDebugInfo();
-        }
-        
-        /// <summary>
-        /// Set debug panel visibility
-        /// </summary>
-        public void SetDebugMode(bool enabled)
-        {
-            _showDebugInfo = enabled;
-            
-            _debugComponent?.UpdateVisibility(enabled);
         }
         
         /// <summary>
@@ -394,6 +520,15 @@ namespace TangibleTable.Core.Behaviours
         public virtual void Destroy()
         {
             GameObject.Destroy(gameObject);
+        }
+        
+        /// <summary>
+        /// Set debug panel visibility - kept for compatibility with GlobalTuioDebugger
+        /// </summary>
+        public void SetDebugMode(bool enabled)
+        {
+            _showDebugInfo = enabled;
+            _debugComponent?.UpdateVisibility(enabled);
         }
     }
 } 

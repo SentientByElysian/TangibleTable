@@ -5,7 +5,9 @@ using TuioUnity.Common;
 using UnityEngine;
 using UnityEngine.Events;
 using TangibleTable.Core.Behaviours;
-using TangibleTable.Core.Debug;
+using TangibleTable.Core.Behaviours.Visualization;
+using TangibleTable.Core.Behaviours.Settings;
+using TangibleTable.Core.Debugging;
 using UTool.TabSystem;
 
 namespace TangibleTable.Core.Managers

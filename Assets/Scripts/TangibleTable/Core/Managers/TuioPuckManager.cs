@@ -4,6 +4,9 @@ using TuioNet.Tuio11;
 using TuioUnity.Common;
 using UnityEngine.Events;
 using TangibleTable.Core.Behaviours;
+using TangibleTable.Core.Behaviours.Pucks;
+using TangibleTable.Core.Behaviours.Visualization;
+using TangibleTable.Core.Behaviours.Settings;
 using UTool.TabSystem;
 
 namespace TangibleTable.Core.Managers
@@ -224,7 +227,7 @@ namespace TangibleTable.Core.Managers
             TuioVisualizer behaviour = puckObject.GetComponent<TuioVisualizer>();
             if (behaviour == null)
             {
-                UnityEngine.Debug.LogError("[TuioPuckManager] Prefab does not have a TuioVisualizer component");
+                Debug.LogError("[TuioPuckManager] Prefab does not have a TuioVisualizer component");
                 Destroy(puckObject);
                 return null;
             }
@@ -232,7 +235,7 @@ namespace TangibleTable.Core.Managers
             // Check if puck has RectTransform (UI element)
             if (puckObject.GetComponent<RectTransform>() != null && targetCanvas == null && !parent.GetComponentInParent<Canvas>())
             {
-                UnityEngine.Debug.LogWarning("[TuioPuckManager] UI object not parented to Canvas! It will not be visible.");
+                Debug.LogWarning("[TuioPuckManager] UI object not parented to Canvas! It will not be visible.");
             }
             
             behaviour.Initialize(tuioObject);
@@ -246,11 +249,15 @@ namespace TangibleTable.Core.Managers
         protected virtual TuioPuck CreatePuck(Tuio11Object tuioObject, TuioVisualizer behaviour)
         {
             TuioPuck puck = behaviour.gameObject.GetComponent<TuioPuck>();
+            
             if (puck == null)
             {
-                puck = behaviour.gameObject.AddComponent<TuioPuck>();
+                Debug.LogError($"[TuioPuckManager] Prefab '{behaviour.gameObject.name}' does not have a TuioPuck or derived component! " +
+                                           $"Add TuioPuck or a custom TuioPuck subclass to your prefab.");
+                return null;
             }
             
+            // Initialize the puck
             puck.Initialize(tuioObject, behaviour);
             
             return puck;

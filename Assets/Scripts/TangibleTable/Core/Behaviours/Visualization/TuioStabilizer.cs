@@ -1,7 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TangibleTable.Core.Behaviours.Visualization;
 
-namespace TangibleTable.Core.Behaviours
+namespace TangibleTable.Core.Behaviours.Visualization
 {
     /// <summary>
     /// Provides advanced rotation and position smoothing for TUIO objects to reduce jitter.
@@ -198,19 +199,36 @@ namespace TangibleTable.Core.Behaviours
             float posSpeedFactor = CalculateAdaptiveSpeed(_positionChangeRate, 10f);
             float adaptivePositionSpeed = _positionSmoothSpeed * posSpeedFactor;
             
-            // Smooth and apply position
-            _currentPosition = Vector3.Lerp(_currentPosition, _targetPosition, adaptivePositionSpeed);
+            // For zero speed, apply position directly without smoothing
+            if (_positionSmoothSpeed <= 0.001f)
+            {
+                _currentPosition = _targetPosition;
+            }
+            else
+            {
+                // Smooth and apply position
+                _currentPosition = Vector3.Lerp(_currentPosition, _targetPosition, adaptivePositionSpeed);
+            }
+            
             transform.position = _currentPosition;
             
             // Smooth and apply rotation (for objects only)
             if (_mode == StabilizationMode.Object)
             {
-                // Handle 360-degree wrapping when lerping between angles
-                float shortestAngle = Mathf.DeltaAngle(_currentRotation, _targetRotation);
-                _currentRotation = Mathf.Lerp(0, shortestAngle, _rotationSmoothSpeed) + _currentRotation;
-                
-                // Keep angle in 0-360 range
-                _currentRotation = (_currentRotation + 360f) % 360f;
+                // For zero speed, apply rotation directly without smoothing
+                if (_rotationSmoothSpeed <= 0.001f)
+                {
+                    _currentRotation = _targetRotation;
+                }
+                else 
+                {
+                    // Handle 360-degree wrapping when lerping between angles
+                    float shortestAngle = Mathf.DeltaAngle(_currentRotation, _targetRotation);
+                    _currentRotation = Mathf.Lerp(0, shortestAngle, _rotationSmoothSpeed) + _currentRotation;
+                    
+                    // Keep angle in 0-360 range
+                    _currentRotation = (_currentRotation + 360f) % 360f;
+                }
                 
                 // Apply the rotation
                 transform.rotation = Quaternion.Euler(0, 0, _currentRotation);

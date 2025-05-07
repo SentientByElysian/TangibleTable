@@ -1,6 +1,9 @@
 using UnityEngine;
 using TangibleTable.Core.Managers;
 using TangibleTable.Core.Behaviours;
+using TangibleTable.Core.Behaviours.Pucks;
+using TangibleTable.Core.Behaviours.Visualization;
+using TangibleTable.Core.Behaviours.Settings;
 using TuioUnity.Common;
 using UTool.TabSystem;
 
