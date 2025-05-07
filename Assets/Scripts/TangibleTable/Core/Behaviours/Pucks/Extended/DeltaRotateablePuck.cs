@@ -1,10 +1,10 @@
 using UnityEngine;
 
-namespace TangibleTable.Core.Behaviours.Pucks
+namespace TangibleTable.Core.Behaviours.Pucks.Extended
 {
     /// <summary>
-    /// A TuioPuck subclass that controls rotation based on delta rotation.
-    /// This allows physical markers to rotate objects relative to their initial placement angle.
+    /// A TuioPuck subclass that controls rotation based on the physical marker's orientation.
+    /// The object will immediately adopt the exact orientation of the physical marker.
     /// </summary>
     public class DeltaRotateablePuck : TuioPuck
     {
@@ -21,11 +21,6 @@ namespace TangibleTable.Core.Behaviours.Pucks
         [Tooltip("Rotation offset to apply (added to the final rotation)")]
         [SerializeField] private float rotationOffset = 0f;
         
-        // Track delta rotation from initial placement
-        private float _currentDeltaRotation = 0f;
-        private float _referenceAngle = 0f;
-        private bool _isReferenceSet = false;
-        
         /// <summary>
         /// Called after initialization
         /// </summary>
@@ -39,16 +34,8 @@ namespace TangibleTable.Core.Behaviours.Pucks
                 targetTransform = transform;
             }
             
-            // Initialize reference angle
-            _referenceAngle = rotation;
-            _isReferenceSet = true;
-            _currentDeltaRotation = 0f;
-            
-            // Apply initial rotation with offset
-            if (targetTransform != null)
-            {
-                targetTransform.rotation = Quaternion.Euler(0, 0, rotationOffset);
-            }
+            // Apply initial marker orientation directly
+            ApplyRotation();
         }
         
         /// <summary>
@@ -58,29 +45,10 @@ namespace TangibleTable.Core.Behaviours.Pucks
         {
             base.OnUpdate();
             
-            if (targetTransform == null || !_isReferenceSet) return;
+            if (targetTransform == null) return;
             
-            // Calculate delta rotation from reference angle
-            _currentDeltaRotation = Mathf.DeltaAngle(_referenceAngle, rotation);
-            
-            // Make sure delta is in 0-360 range
-            _currentDeltaRotation = (_currentDeltaRotation + 360f) % 360f;
-            
-            // Apply the rotation multiplier and inversion
-            float rotationValue = _currentDeltaRotation * rotationMultiplier;
-            if (invertRotation)
-            {
-                rotationValue = -rotationValue;
-            }
-            
-            // Add the offset
-            rotationValue += rotationOffset;
-            
-            // Apply rotation to the target transform (Z-axis rotation in 2D)
-            targetTransform.rotation = Quaternion.Euler(0, 0, rotationValue);
-            
-            // Update state display in TuioVisualizer (useful for debugging)
-            TuioBehaviour?.SetPuckState($"Delta: {_currentDeltaRotation:F0}°");
+            // Apply rotation from the physical marker
+            ApplyRotation();
         }
         
         /// <summary>
@@ -89,6 +57,27 @@ namespace TangibleTable.Core.Behaviours.Pucks
         protected override void OnRemove()
         {
             base.OnRemove();
+        }
+        
+        /// <summary>
+        /// Apply rotation from the physical marker to the target transform
+        /// </summary>
+        private void ApplyRotation()
+        {
+            float rotationValue = rotation * rotationMultiplier;
+            if (invertRotation)
+            {
+                rotationValue = -rotationValue;
+            }
+            
+            // Add the offset and normalize to 0-360 range
+            rotationValue = (rotationValue + rotationOffset) % 360f;
+            
+            // Apply rotation to the target transform (Z-axis rotation in 2D)
+            targetTransform.rotation = Quaternion.Euler(0, 0, rotationValue);
+            
+            // Update state display in TuioVisualizer (useful for debugging)
+            TuioBehaviour?.SetPuckState($"Angle: {rotation:F0}°");
         }
     }
 } 

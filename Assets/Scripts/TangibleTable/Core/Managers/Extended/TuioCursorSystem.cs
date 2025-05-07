@@ -1,9 +1,6 @@
 using UnityEngine;
-using TangibleTable.Core.Managers;
-using TangibleTable.Core.Behaviours;
-using UTool.TabSystem;
 
-namespace TangibleTable
+namespace TangibleTable.Core.Managers.Extended
 {
     /// <summary>
     /// Enhanced TUIO cursor system that provides smoothing and UI interaction for touch input.
