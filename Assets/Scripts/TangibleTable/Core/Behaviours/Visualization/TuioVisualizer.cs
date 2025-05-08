@@ -444,11 +444,24 @@ namespace TangibleTable.Core.Behaviours.Visualization
                 adjustedPos.x = Mathf.Clamp01(adjustedPos.x);
                 adjustedPos.y = Mathf.Clamp01(adjustedPos.y);
                 
-                // Convert to screen space
-                float screenX = adjustedPos.x * Screen.width;
-                float screenY = (1 - adjustedPos.y) * Screen.height;
-            return new Vector3(screenX, screenY, 0);
-        }
+                // Find the parent canvas and check its render mode
+                Canvas parentCanvas = GetComponentInParent<Canvas>();
+                if (parentCanvas != null && parentCanvas.renderMode == RenderMode.ScreenSpaceCamera && parentCanvas.worldCamera != null)
+                {
+                    // For Screen Space Camera, convert to world position using the canvas camera
+                    float screenX = adjustedPos.x * Screen.width;
+                    float screenY = (1 - adjustedPos.y) * Screen.height;
+                    Vector3 screenPoint = new Vector3(screenX, screenY, parentCanvas.planeDistance);
+                    return parentCanvas.worldCamera.ScreenToWorldPoint(screenPoint);
+                }
+                else
+                {
+                    // For Screen Space Overlay, just use screen coordinates
+                    float screenX = adjustedPos.x * Screen.width;
+                    float screenY = (1 - adjustedPos.y) * Screen.height;
+                    return new Vector3(screenX, screenY, 0);
+                }
+            }
         }
         
         /// <summary>
