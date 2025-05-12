@@ -1,0 +1,37 @@
+{
+  "name": "com.interactive-scape.tuio_client",
+  "version": "2.0.4",
+  "displayName": "TUIO Client",
+  "description": "TUIO Client package for TUIO 1.1 and TUIO 2.0",
+  "unity": "2021.3",
+  "unityRelease": "25f1",
+  "documentationUrl": "https://github.com/InteractiveScapeGmbH/TuioUnityClient",
+  "changelogUrl": "https://github.com/InteractiveScapeGmbH/TuioUnityClient/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/InteractiveScapeGmbH/TuioUnityClient/blob/main/LICENSE",
+  "samples": [
+    {
+      "displayName": "TUIO 1.1",
+      "description": "Sample Project to work with TUIO 1.1",
+      "path": "Samples~/TUIO 1.1"
+    },
+    {
+      "displayName": "TUIO 2.0",
+      "description": "Sample Project to work with TUIO 2.0",
+      "path": "Samples~/TUIO 2.0"
+    }
+  ],
+  "keywords": [
+    "TUIO",
+    "touch",
+    "multitouch"
+  ],
+  "author": {
+    "name": "Interactive Scape",
+    "email": "info@interactive-scape.com",
+    "url": "https://www.interactive-scape.com"
+  },
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
