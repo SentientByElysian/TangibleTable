@@ -1,14 +1,13 @@
 {
   "dependencies": {
     "com.interactive-scape.tuio_client": {
-      "version": "https://github.com/InteractiveScapeGmbH/TuioUnityClient.git",
+      "version": "file:com.interactive-scape.tuio_client@2f8a4bd687",
       "depth": 0,
-      "source": "git",
+      "source": "embedded",
       "dependencies": {
         "com.unity.textmeshpro": "3.0.0",
         "com.unity.nuget.newtonsoft-json": "3.2.1"
-      },
-      "hash": "2f8a4bd6873f5e613eea6d5145bdb6934ffcb17a"
+      }
     },
     "com.unity.ai.navigation": {
       "version": "1.1.5",
