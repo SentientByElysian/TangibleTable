@@ -16,7 +16,7 @@ public class PositionStabilizer : BaseModifier
     
     public Vector2 SetTarget(Vector2 position)
     {
-        if (!settings?.enabled ?? true)
+        if (!settings?.isEnabled ?? true)
         {
             Vector2 finalPos = position + settings.offset;
             rectTransform.anchoredPosition = finalPos;
@@ -56,7 +56,7 @@ public class PositionStabilizer : BaseModifier
     
     private void Update()
     {
-        if (initialized && settings?.enabled == true)
+        if (initialized && settings?.isEnabled == true)
             UpdatePosition();
     }
 }
